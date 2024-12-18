@@ -28,6 +28,7 @@ class ProfessorList :
         
     def getProfList(self):
         url=self.url
+        regions=self.regions
         
         if not is_valid_url(url):
             print("Error: Invalid URL format")
@@ -83,20 +84,20 @@ class ProfessorList :
                                         text+="\n"
                                         text+="\n"
                                         text += f"Name: {author_name}"
-                                    else:
-                                        link_url = a_tag["href"]
-                                        if link_url.startswith("/"):
-                                            link_url = urlparse(url)._replace(path=link_url).geturl()
-                                        # Embed the link URL into the text
-                                        text += f"\n\n[Link: {link_url}]"
+                                    # else:
+                                    #     link_url = a_tag["href"]
+                                    #     if link_url.startswith("/"):
+                                    #         link_url = urlparse(url)._replace(path=link_url).geturl()
+                                    #     # Embed the link URL into the text
+                                    #     text += f"\n\n[Link: {link_url}]"
 
                                     
-                                if ("title" in a_tag.attrs and "Click for author's Google Scholar page." in a_tag["title"]):
-                                    link_url = a_tag["href"]
-                                    if link_url.startswith("/"):
-                                        link_url = urlparse(url)._replace(path=link_url).geturl()
-                                    # Embed the link URL into the text
-                                    text += f"\n\n[Link: {link_url}]"
+                                # if ("title" in a_tag.attrs and "Click for author's Google Scholar page." in a_tag["title"]):
+                                #     link_url = a_tag["href"]
+                                #     if link_url.startswith("/"):
+                                #         link_url = urlparse(url)._replace(path=link_url).geturl()
+                                #     # Embed the link URL into the text
+                                #     text += f"\n\n[Link: {link_url}]"
                                 if ("title" in a_tag.attrs and "Click for author's DBLP entry." in a_tag["title"]):
                                     link_url = a_tag["href"]
                                     if link_url.startswith("/"):
@@ -117,10 +118,10 @@ class ProfessorList :
             print(f"Error: {str(e)}")
             return None
     
-file_name = "user_agent.txt"
-regions=["Asia","South Africa"]
+# file_name = "user_agent.txt"
+# regions=["Asia","South Africa"]
 
-with open("user_agent.txt", "w", encoding="utf-8") as file:
-    text=ProfessorList("https://www.csrankings.org",regions=regions).getProfList()
-    file.write(text)
+# with open("user_agent.txt", "w", encoding="utf-8") as file:
+#     text=ProfessorList("https://www.csrankings.org",regions=regions).getProfList()
+#     file.write(text)
 

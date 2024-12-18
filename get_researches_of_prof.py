@@ -47,7 +47,7 @@ class ProfResearches:
             counter=0
 
             for nav in soup.find_all('nav', class_='publ'):
-                if counter>=5:
+                if counter>=3:
                     break
                 counter+=1
 
@@ -73,8 +73,8 @@ class ProfResearches:
             print(f"Error: {str(e)}")
             return None
     
-file_name = "user_agent.txt"
-text=ProfResearches("https://dblp.org/pid/24/2104.html").getProfResearches()
+# file_name = "user_agent.txt"
+# text=ProfResearches("https://dblp.org/pid/24/2104.html").getProfResearches()
 
-with open("user_agent.txt", "w", encoding="utf-8") as file:
-    file.write(text)
+# with open("user_agent.txt", "w", encoding="utf-8") as file:
+#     file.write(text)

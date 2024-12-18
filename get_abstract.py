@@ -76,8 +76,8 @@ class ResearchAbstract():
             print(f"Error: {str(e)}")
             return None
     
-file_name = "user_agent.txt"
-text=ResearchAbstract("https://doi.org/10.4230/LIPIcs.ECOOP.2024.17").getResearchAbstract()
+# file_name = "user_agent.txt"
+# text=ResearchAbstract("https://doi.org/10.4230/LIPIcs.ECOOP.2024.17").getResearchAbstract()
 
-with open("user_agent.txt", "w", encoding="utf-8") as file:
-    file.write(text)
+# with open("user_agent.txt", "w", encoding="utf-8") as file:
+#     file.write(text)
