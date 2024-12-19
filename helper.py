@@ -4,7 +4,7 @@ from get_researches_of_prof import ProfResearches
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-class Email_Creater:
+class EmailCreater:
     def __init__(self, url, regions):
         self.url = url
         self.regions = regions
@@ -29,7 +29,6 @@ class Email_Creater:
 
         researches = []
         lines=newText.splitlines()
-        logging.info(newText)
         counter=1
         for line in lines:
             newText2=""
@@ -43,7 +42,6 @@ class Email_Creater:
                 newText2+=self._get_research_abstract(research_url)
                 newText2+="\n"
                 counter+=1
-                logging.info(newText2)
             else :
                 counter=1
                 newText2+=line

@@ -1,7 +1,7 @@
-import requests
 import logging
 import chainlit as cl
-from helper import Email_Creater
+from PyPDF2 import PdfReader
+from helper import EmailCreater
 from weather import get_current_weather
 from random_joke import get_random_joke
 from langchain_ollama import ChatOllama
@@ -78,8 +78,9 @@ tools = [
 ]
 
 # Initialize the AI model
-model = ChatOllama(model="llama3.2:3b", format="json", temperature=0.3, num_ctx=8192)
-model = model.bind_tools(tools=tools)
+model1 = ChatOllama(model="llama3.2:3b", format="json", temperature=0.3, num_ctx=8192)
+model2 = ChatOllama(model="llama3.2:3b", temperature=0.3, num_ctx=8192)
+model1 = model1.bind_tools(tools=tools)
 
 # Create the prompt template for the AI model
 prompt = ChatPromptTemplate.from_messages([
@@ -87,15 +88,47 @@ prompt = ChatPromptTemplate.from_messages([
     HumanMessagePromptTemplate.from_template("{input}"),
 ])
 
+# Function to extract skills from resume
+def extract_skills(resume: str) -> str:
+    prompt = ChatPromptTemplate.from_template(f"""You are an AI assistant tasked with extracting the skills from a resume. The resume may contain various sections such as personal information, education, work experience, and technical skills. Focus on identifying and listing the skills mentioned in the resume. Please extract the skills and list them clearly. If the skills are organized in a section, make sure to list them from that section. If the skills are mentioned throughout the document, collect them all and present them as a comprehensive list.
+    Resume Text:
+    {resume}
+    Extracted Skills:""")
+    formatted_prompt = prompt.format_messages(resume=resume)
+    result = model2.invoke(formatted_prompt)
+    logging.info(result)
+    return result.content
+
+# Function to create summarized abstract
+def create_abstract(research: str) -> str:
+    prompt = ChatPromptTemplate.from_template(f"Please extract and summarize the Abstract of the following research:\n{research}")
+    formatted_prompt = prompt.format_messages(research=research)
+    result = model2.invoke(formatted_prompt)
+    logging.info(result)
+    return result.content
+
+# Function to generate email
+def generate_email(summarized_researches: str, skills: str) -> str:
+    prompt = ChatPromptTemplate.from_template(f"""Below is a professor's research abstract and a summary of my skills froskills. Please generate a polite and professional email body introducing me to the professor. In the email, mention the specific area of research the professor is involved in, and highlight the skills I have that are relevant to their work. Express my interest in discussing potential opportunities for collaboration or research.
+    Professor's Research Abstract:
+    {summarized_researches}
+    My Skills:
+    {skills}
+    Generate a personalized email to the professor:""")
+    formatted_prompt = prompt.format_messages(summarized_researches=summarized_researches, skills=skills)
+    result = model2.invoke(formatted_prompt)
+    logging.info(result)
+    return result.content
+
 # Function to process user queries
-def process_query(query: str) -> str:
+def process_query(query: str, resume: str = None) -> str:
     """
     Processes user queries by invoking the AI model and calling appropriate functions.
     """
     logging.info(f"Processing query: {query}")
     formatted_prompt = prompt.format_messages(input=query)
     logging.info(f"Formatted prompt: {formatted_prompt}")
-    result = model.invoke(formatted_prompt)
+    result = model1.invoke(formatted_prompt)
     logging.info(result)
     
     if result.tool_calls:
@@ -110,9 +143,17 @@ def process_query(query: str) -> str:
                 return get_random_joke()
             elif function_name == "get_conversational_response":
                 return args['response']
-            elif function_name == "get_prof_list":
-                all_researches = Email_Creater(args['website'], args['location']).get_data()
-                return "\n".join(all_researches)
+            elif function_name == "get_prof_list" and resume:
+                logging.info(resume)
+                skills = extract_skills(resume)
+                all_researches = EmailCreater(args['website'], args['location']).get_data()
+
+                summarized_researches = ""
+                for research in all_researches:
+                    summarized_researches += create_abstract(research) + "\n"
+
+                email = generate_email(summarized_researches, skills) 
+                return email
 
     return result.content
 
@@ -123,7 +164,48 @@ async def start():
     Initializes the chat session.
     """
     logging.info("Chat started")
-    cl.user_session.set("model", model)
+    cl.user_session.set("model", model1)
+
+    # Ask the user to upload a file
+    files = await cl.AskFileMessage(
+        content="Please upload the Resume to begin!",
+        accept=["application/pdf"],
+        max_size_mb=20,
+        timeout=10,  # Consider increasing the timeout if needed
+    ).send()
+
+    if files is None or len(files) == 0:
+        # Handle the case where no file is uploaded or timeout occurs
+        await cl.Message(content="No file was uploaded or the upload timed out. Please try again.").send()
+        return
+
+    # Process the uploaded file
+    resume = files[0]
+    pdf_text = ""
+    msg = cl.Message(content=f"Processing `{resume.name}`...")
+    await msg.send()
+
+    try:
+        # Extract text from the PDF file
+        with open(resume.path, "rb") as file:
+            pdf_reader = PdfReader(file)
+            for page in pdf_reader.pages:
+                pdf_text += page.extract_text()
+
+        # Send the extracted text as a message
+        if pdf_text.strip():
+            msg = cl.Message(content=f"Extracted text from `{resume.name}`:\n{pdf_text}")
+        else:
+            msg = cl.Message(content=f"Could not extract text from `{resume.name}`. It may be a scanned image or empty.")
+        await msg.send()
+
+        # Store the resume in the session
+        cl.user_session.set("resume", pdf_text)
+
+    except Exception as e:
+        error_message = f"Error processing `{resume.name}`: {str(e)}"
+        logging.error(error_message)
+        await cl.Message(content=error_message).send()
 
 # Chainlit event handler for incoming messages
 @cl.on_message
@@ -135,11 +217,15 @@ async def main(message: cl.Message):
     message (cl.Message): The incoming user message
     """
     logging.info(f"Received message: {message.content}")
-    try:
-        response = await cl.make_async(process_query)(message.content)
-        logging.info(f"Response: {response}")
-        await cl.Message(content=response).send()
-    except Exception as e:
-        error_message = f"An error occurred: {str(e)}"
-        logging.error(f"Error: {error_message}")
-        await cl.Message(content=error_message).send()
+
+    if message.content:
+        resume = cl.user_session.get('resume')
+        query = message.content
+        logging.info(resume)
+        if resume:
+            response = await cl.make_async(process_query)(query, resume)
+            logging.info(f"Generated Response: {response}")
+            await cl.Message(content=response).send()
+        else:
+            # This should ideally never happen if resume was uploaded correctly
+            await cl.Message(content="Something went wrong while processing the resume. Please try again.").send()
