@@ -1,7 +1,8 @@
 import logging
+import pandas as pd
 import chainlit as cl
 from PyPDF2 import PdfReader
-from helper import EmailCreater
+from helper import EmailCreater, EmailFinder
 from weather import get_current_weather
 from random_joke import get_random_joke
 from langchain_ollama import ChatOllama
@@ -150,13 +151,21 @@ def process_query(query: str, resume: str = None) -> str:
             elif function_name == "get_prof_list" and resume:
                 logging.info(resume)
                 skills = extract_skills(resume)
-                all_researches = EmailCreater(args['website'], args['location']).get_data()
+                all_researches, df1 = EmailCreater(args['website'], args['location']).get_data()
+
+                temp_df = df1[['Professor Name', 'University Name']].copy()
+                temp_df = temp_df.rename(columns={'Professor Name': 'prof_name', 'University Name': 'university_name'})
+                tables = temp_df.to_dict(orient='records')           # Convert the DataFrame into a list of dictionaries
+                df2 = EmailFinder(tables).get_emails()
+                merged_df = pd.merge(df1, df2, on=['Professor Name', 'University Name'], how='outer')
 
                 summarized_researches = ""
                 for research in all_researches:
                     summarized_researches += create_abstract(research) + "\n"
 
                 email = generate_email(summarized_researches, skills) 
+                merged_df['Email'] = email
+                merged_df.to_csv('final.csv', index=False)
                 return email
 
     return result.content
