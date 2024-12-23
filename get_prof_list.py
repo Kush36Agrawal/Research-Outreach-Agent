@@ -8,6 +8,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import time
 import requests
+import pandas as pd
+
 import re
 from urllib.parse import urlparse
 
@@ -51,7 +53,7 @@ class ProfessorList :
             WebDriverWait(driver, 10).until(
                 EC.invisibility_of_element_located((By.CLASS_NAME, "centerscreen"))
             )
-
+            
             dropdowns = driver.find_elements(By.ID, "regions")
 
 
@@ -72,32 +74,35 @@ class ProfessorList :
                             time.sleep(2)
                             page_content = driver.page_source
                             soup = BeautifulSoup(page_content, 'html.parser')
+
                             print(f"Dropdown option: {option_text}")  # Print out the option text (optional)
                             for a_tag in soup.find_all("a", href=True):
                                 parent_td = a_tag.find_parent("td")
                                 if parent_td and parent_td.get("align") == "right":
                                     continue  # Skip this <a> tag
 
-                                if ("title" in a_tag.attrs and "Click for author's home page." in a_tag["title"]):
+                                if "title" in a_tag.attrs and "Click for author's home page." in a_tag["title"]:
                                     author_name = a_tag.get_text(strip=True)
+
+                                    # Traverse upward to find the university name
+                                    university_name = "Unknown University"  # Default value
+                                    parent_tr = a_tag.find_parent("tr")
+                                    parent_tr = parent_tr.find_parent("tr")
+                                    parent_tr=parent_tr.find_previous_sibling().find_previous_sibling()
+                                    if parent_tr:
+                                        # print(f"DEBUG: Found parent tr: {parent_tr}")  # Debugging
+                                        university_span = parent_tr.find("span", onclick=True, class_=lambda x: x != "hovertip" if x else True)
+                                        if university_span:
+                                            # print(f"DEBUG: Found span: {university_span}")  # Debugging
+                                            if "toggleFaculty" in university_span.get("onclick", ""):
+                                                university_name = university_span.get_text(strip=True)
+                                    
                                     if author_name:
                                         text+="\n"
                                         text+="\n"
                                         text += f"Name: {author_name}"
-                                    # else:
-                                    #     link_url = a_tag["href"]
-                                    #     if link_url.startswith("/"):
-                                    #         link_url = urlparse(url)._replace(path=link_url).geturl()
-                                    #     # Embed the link URL into the text
-                                    #     text += f"\n\n[Link: {link_url}]"
+                                        text +=f" Univeristy Name: {university_name}"
 
-                                    
-                                # if ("title" in a_tag.attrs and "Click for author's Google Scholar page." in a_tag["title"]):
-                                #     link_url = a_tag["href"]
-                                #     if link_url.startswith("/"):
-                                #         link_url = urlparse(url)._replace(path=link_url).geturl()
-                                #     # Embed the link URL into the text
-                                #     text += f"\n\n[Link: {link_url}]"
                                 if ("title" in a_tag.attrs and "Click for author's DBLP entry." in a_tag["title"]):
                                     link_url = a_tag["href"]
                                     if link_url.startswith("/"):
