@@ -1,13 +1,15 @@
 import time
-from get_prof_list import ProfessorList
-from get_abstract import ResearchAbstract
-from get_researches_of_prof import ProfResearches
 import logging
 import pandas as pd
+from get_prof_list import ProfessorList
+from get_abstract import ResearchAbstract
 from playwright.sync_api import sync_playwright
+from get_researches_of_prof import ProfResearches
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class EmailCreater:
+    """Creates a DataFrame with the list of Professors and their Research Abstracts."""
+
     def __init__(self, url, regions):
         self.url = url
         self.regions = regions
@@ -43,12 +45,13 @@ class EmailCreater:
         return self._get_research_abstract(link)
 
 class EmailFinder:
+    """Creates a DataFrame with the list of Professors and their Emails."""
+
     def __init__(self, tables):
         self.tables = tables
         self.df = pd.DataFrame(columns=['Professor Name', 'University Name', 'Email Address'])
 
     def get_emails(self):
-        tables = self.tables
 
         try:
             with sync_playwright() as p:
@@ -71,7 +74,7 @@ class EmailFinder:
 
                 # Loop through the list of tables and send messages
                 time.sleep(1)
-                for table in tables:
+                for table in self.tables:
                     prof_name = table["prof_name"]
                     university_name = table["university_name"]
                     

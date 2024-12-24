@@ -1,52 +1,45 @@
+import re
+from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from urllib.parse import urlparse
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from bs4 import BeautifulSoup
-import time
-import requests
-import re
-from urllib.parse import urlparse
+
 
 def is_valid_url(url):
-    """Check if the provided URL is valid."""
+    """Check if the provided URL is valid and ensure it starts with 'https://'."""
+
+    if not url.lower().startswith('https://'):      # Step 1: Ensure the URL starts with 'https://'
+        url = 'https://' + url
+
     try:
-        result = urlparse(url)
+        result = urlparse(url)                      # Step 2: Validate the URL
         return all([result.scheme, result.netloc])
     except:
         return False
 
 class ResearchAbstract():
+    """Fetch the webpage content, extract readable text, and capture all redirecting elements within the text."""
 
     def __init__(self, url):
         self.url=url
-        print(url)
 
     def getResearchAbstract(self):
-        url=self.url
-        """Fetch the webpage content, extract readable text, and capture all redirecting elements within the text."""
-        if not is_valid_url(url):
-            print("Error: Invalid URL format")
+
+        if not is_valid_url(self.url):
+            print("Error: Invalid URL")
             return None
+        print(self.url)
 
         try:
-            # Set up Selenium WebDriver (using Chrome in this case)
             options = webdriver.ChromeOptions()
-            options.add_argument("--headless")  # Optional: run in headless mode (no UI)
+            options.add_argument("--headless")
             driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-            
-            # Open the URL
-            driver.get(url)
-
-            # Wait for dynamic content to load (adjust the wait time or condition based on the page)
-            # Interact with all dropdowns on the page
+        
+            driver.get(self.url)
             
             page_content = driver.page_source
 
-            # Close the driver once done
             driver.quit()
 
             # Create BeautifulSoup object from the page source
@@ -67,17 +60,8 @@ class ResearchAbstract():
             # Remove multiple newlines
             text = re.sub(r'\n\s*\n', '\n\n', text)
 
-            # Embed links (URLs in <a> tags) into the text
-            
-
             return text.strip()
 
         except Exception as e:
             print(f"Error: {str(e)}")
             return None
-    
-# file_name = "user_agent.txt"
-# text=ResearchAbstract("https://doi.org/10.4230/LIPIcs.ECOOP.2024.17").getResearchAbstract()
-
-# with open("user_agent.txt", "w", encoding="utf-8") as file:
-#     file.write(text)
