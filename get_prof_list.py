@@ -26,7 +26,7 @@ class ProfessorList :
         self.url=url
         self.regions=regions
         self.text=""
-        self.df = pd.DataFrame(columns=['Professor Name', 'Region', 'University Name'])
+        self.df = pd.DataFrame(columns=['Professor Name', 'Region', 'University Name', 'DBLP Link'])
         print(url)
         
     def getProfList(self):
@@ -82,7 +82,7 @@ class ProfessorList :
                                 if parent_td and parent_td.get("align") == "right":
                                     continue  # Skip this <a> tag
 
-                                if "title" in a_tag.attrs and "Click for author's home page." in a_tag["title"]:
+                                if ("title" in a_tag.attrs and "Click for author's home page." in a_tag["title"] and a_tag.get_text(strip=True)):
                                     author_name = a_tag.get_text(strip=True)
 
                                     # Traverse upward to find the university name
@@ -103,8 +103,6 @@ class ProfessorList :
                                         text+="\n"
                                         text += f"Name: {author_name}"
                                         text +=f" Univeristy Name: {university_name}"
-                                        new_row = pd.DataFrame([{'Professor Name': author_name, 'Region': option_text, 'University Name': university_name}])
-                                        self.df = pd.concat([self.df, new_row], ignore_index=True)
 
                                 if ("title" in a_tag.attrs and "Click for author's DBLP entry." in a_tag["title"]):
                                     link_url = a_tag["href"]
@@ -112,6 +110,8 @@ class ProfessorList :
                                         link_url = urlparse(url)._replace(path=link_url).geturl()
                                     # Embed the link URL into the text
                                     text += f"\n\n[Link: {link_url}]"
+                                    new_row = pd.DataFrame([{'Professor Name': author_name, 'Region': option_text, 'University Name': university_name, 'DBLP Link': link_url}])
+                                    self.df = pd.concat([self.df, new_row], ignore_index=True)
                                 
 
                 except Exception as e:
@@ -120,7 +120,7 @@ class ProfessorList :
 
             driver.quit()
 
-            return text.strip(), self.df
+            return self.df
 
         except Exception as e:
             print(f"Error: {str(e)}")

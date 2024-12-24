@@ -13,46 +13,29 @@ class EmailCreater:
         self.regions = regions
 
     def get_data(self):
-        data, df = self._get_prof_list()
-        newText=""
-        lines=data.splitlines()
-        for line in lines:
-            line=line.strip()
-            if line.startswith("[Link:"):
-                start_index=line.find("http")
-                end_index=line.find("]",start_index)
-                prof_url=line[start_index:end_index]
-                newText= newText + self._get_prof_researches(prof_url)
-            else :
-                newText+="\n"
-                newText+=line
-        x=newText.splitlines()
-        y=x[:10]
-        newText="\n".join(y)
+        df = self._get_prof_list()
 
-        researches = []
-        lines=newText.splitlines()
-        counter=1
-        for line in lines:
-            newText2=""
-            line=line.strip()
-            if line.startswith("https://"):
-                research_url=line
-                newText2+="\n"
-                newText2+=f"Abstract for Research Paper {counter}"
-                newText2+="\n"
-                newText2+="\n"
-                newText2+=self._get_research_abstract(research_url)
-                newText2+="\n"
-                counter+=1
-            else :
-                counter=1
-                newText2+=line
-                newText2+="\n"
-            logging.info(newText2)
-            researches.append(newText2)
+        list_of_research_link = []
+        for _, row in df.iterrows():
+            processed_row = self._get_prof_researches(row['DBLP Link'])
+            
+            list_of_research_link.append(processed_row)
 
-        return researches, df
+        research_df = pd.DataFrame(list_of_research_link, columns=[f'Link {i+1}' for i in range(len(list_of_research_link[0]))])  # Convert list of lists into DataFrame
+
+        df = pd.concat([df, research_df], axis=1)           # Concatenate the new DataFrame with the existing DataFrame along columns (axis=1)
+        
+        processed_links_list = []
+        for _, row in df.iterrows():
+            processed_row = [self._process_link(row['Link 1']), self._process_link(row['Link 2']), self._process_link(row['Link 3'])]
+            
+            processed_links_list.append(processed_row)
+
+        processed_df = pd.DataFrame(processed_links_list, columns=['Research 1', 'Research 2', 'Research 3'])
+
+        final_df = pd.concat([df, processed_df], axis=1)
+
+        return final_df
 
     def _get_prof_list(self):
         prof_list = ProfessorList(self.url, self.regions)
@@ -66,6 +49,8 @@ class EmailCreater:
         research_abstract = ResearchAbstract(research_url)
         return research_abstract.getResearchAbstract()
     
+    def _process_link(self, link):
+        return self._get_research_abstract(link)
 
 class EmailFinder:
     def __init__(self, tables):

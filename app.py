@@ -156,17 +156,33 @@ def process_query(query: str, resume: str = None) -> str:
                 temp_df = df1[['Professor Name', 'University Name']].copy()
                 temp_df = temp_df.rename(columns={'Professor Name': 'prof_name', 'University Name': 'university_name'})
                 tables = temp_df.to_dict(orient='records')           # Convert the DataFrame into a list of dictionaries
+
                 df2 = EmailFinder(tables).get_emails()
-                merged_df = pd.merge(df1, df2, on=['Professor Name', 'University Name'], how='outer')
+                df1 = pd.merge(df1, df2, on=['Professor Name', 'University Name'], how='outer')
 
-                summarized_researches = ""
-                for research in all_researches:
-                    summarized_researches += create_abstract(research) + "\n"
+                list_of_summary_of_researches = []
+                for _, row in df1.iterrows():
+                    all_researches = [row['Research 1'], row['Research 2'], row['Research 3']]
+                    summarized_researches = ""
+                    for research in all_researches:
+                        summarized_researches += create_abstract(research) + "\n"
 
-                email = generate_email(summarized_researches, skills) 
-                merged_df['Email'] = email
-                merged_df.to_csv('final.csv', index=False)
-                return email
+                    list_of_summary_of_researches.append(summarized_researches)
+                
+                research_df = pd.DataFrame(list_of_summary_of_researches, columns=['Research Summary'])
+                df3 = pd.concat([df1, research_df], axis=1)
+
+                list_of_emails = []
+                for _, row in df3.iterrows():
+                    email = generate_email(row['Research Summary'], skills) 
+                    list_of_emails.append(email)
+                
+                email_df = pd.DataFrame(list_of_emails, columns=['Email Body'])
+                final_df = pd.concat([df3, email_df], axis=1)
+                
+                final_df.to_csv('final_df.csv', index=False)
+
+                return list_of_emails[0]
 
     return result.content
 
