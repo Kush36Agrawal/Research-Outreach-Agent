@@ -26,7 +26,7 @@ class ProfResearches:
 
     def getProfResearches(self):
         url=self.url
-        """Fetch the webpage content, extract readable text, and capture all redirecting elements within the text."""
+        """Fetch the Research Links of Prof using DBLP Link."""
         if not is_valid_url(url):
             print("Error: Invalid URL format")
             return None
@@ -66,8 +66,7 @@ class ProfResearches:
             # Close the driver once done
             driver.quit()
 
-
-            return text.strip()
+            return text.split("\n")[:3]
 
         except Exception as e:
             print(f"Error: {str(e)}")

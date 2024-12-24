@@ -15,25 +15,15 @@ class EmailCreater:
     def get_data(self):
         df = self._get_prof_list()
 
-        list_of_research_link = []
-        for _, row in df.iterrows():
-            processed_row = self._get_prof_researches(row['DBLP Link'])
-            
-            list_of_research_link.append(processed_row)
+        research_links_df = df['DBLP Link'].apply(self._get_prof_researches).apply(pd.Series)   # Apply _get_prof_researches for vectorized processing
+        research_links_df.columns = [f"Link {i+1}" for i in range(len(research_links_df.columns))]
 
-        research_df = pd.DataFrame(list_of_research_link, columns=[f'Link {i+1}' for i in range(len(list_of_research_link[0]))])  # Convert list of lists into DataFrame
+        df = pd.concat([df, research_links_df], axis=1)                                         # Concatenate research links DataFrame with the original DataFrame
 
-        df = pd.concat([df, research_df], axis=1)           # Concatenate the new DataFrame with the existing DataFrame along columns (axis=1)
-        
-        processed_links_list = []
-        for _, row in df.iterrows():
-            processed_row = [self._process_link(row['Link 1']), self._process_link(row['Link 2']), self._process_link(row['Link 3'])]
-            
-            processed_links_list.append(processed_row)
+        processed_links_df = df[['Link 1', 'Link 2', 'Link 3']].map(self._process_link)         # Apply _process_link for vectorized processing
+        processed_links_df.columns = ['Research 1', 'Research 2', 'Research 3']
 
-        processed_df = pd.DataFrame(processed_links_list, columns=['Research 1', 'Research 2', 'Research 3'])
-
-        final_df = pd.concat([df, processed_df], axis=1)
+        final_df = pd.concat([df, processed_links_df], axis=1)
 
         return final_df
 
