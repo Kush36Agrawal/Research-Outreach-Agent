@@ -149,15 +149,11 @@ def process_query(query: str, resume: str = None) -> str:
             elif function_name == "get_conversational_response":
                 return args['response']
             elif function_name == "get_prof_list" and resume:
-                logging.info(resume)
+                
                 skills = extract_skills(resume)
-                all_researches, df1 = EmailCreater(args['website'], args['location']).get_data()
+                df1 = EmailCreater(args['website'], args['location']).get_data()
 
-                temp_df = df1[['Professor Name', 'University Name']].copy()
-                temp_df = temp_df.rename(columns={'Professor Name': 'prof_name', 'University Name': 'university_name'})
-                tables = temp_df.to_dict(orient='records')           # Convert the DataFrame into a list of dictionaries
-
-                df2 = EmailFinder(tables).get_emails()
+                df2 = EmailFinder(df1).get_emails()
                 df1 = pd.merge(df1, df2, on=['Professor Name', 'University Name'], how='outer')
 
                 list_of_summary_of_researches = []
@@ -250,7 +246,6 @@ async def main(message: cl.Message):
     if message.content:
         resume = cl.user_session.get('resume')
         query = message.content
-        logging.info(resume)
         if resume:
             response = await cl.make_async(process_query)(query, resume)
             logging.info(f"Generated Response: {response}")

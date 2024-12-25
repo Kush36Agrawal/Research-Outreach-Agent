@@ -47,8 +47,13 @@ class EmailCreater:
 class EmailFinder:
     """Creates a DataFrame with the list of Professors and their Emails."""
 
-    def __init__(self, tables):
-        self.tables = tables
+    def __init__(self, df1):
+        self.df1 = df1
+        
+        temp_df = df1[['Professor Name', 'University Name']].copy()
+        temp_df = temp_df.rename(columns={'Professor Name': 'prof_name', 'University Name': 'university_name'})
+        self.tables = temp_df.to_dict(orient='records')           # Convert the DataFrame into a list of dictionaries
+
         self.df = pd.DataFrame(columns=['Professor Name', 'University Name', 'Email Address'])
 
     def get_emails(self):
