@@ -2,11 +2,11 @@ import logging
 import pandas as pd
 import chainlit as cl
 from PyPDF2 import PdfReader
-from helper import EmailCreater, EmailFinder, AbstractAndEmailFinder
 from weather import get_current_weather
 from random_joke import get_random_joke
 from langchain_ollama import ChatOllama
 from langchain.schema import SystemMessage
+from helper import EmailCreater, EmailAndAbstractFinder
 from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 
 # Configure logging
@@ -153,19 +153,15 @@ def process_query(query: str, resume: str = None) -> str:
                 skills = extract_skills(resume)
                 df1 = EmailCreater(args['website'], args['location']).get_data()
 
-                df2,df3= AbstractAndEmailFinder(df1)
-                df3 = pd.merge(df3, df2, on=['Professor Name', 'University Name'], how='outer')
-
-
-                
+                df2 = EmailAndAbstractFinder(df1).get_emails_and_abstracts()
 
                 list_of_emails = []
-                for _, row in df3.iterrows():
+                for _, row in df2.iterrows():
                     email = generate_email(row['Research Summary'], skills) 
                     list_of_emails.append(email)
                 
                 email_df = pd.DataFrame(list_of_emails, columns=['Email Body'])
-                final_df = pd.concat([df3, email_df], axis=1)
+                final_df = pd.concat([df2, email_df], axis=1)
                 
                 final_df.to_csv('final_df.csv', index=False)
 
