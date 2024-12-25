@@ -5,6 +5,7 @@ from get_prof_list import ProfessorList
 from get_abstract import ResearchAbstract
 from playwright.sync_api import sync_playwright
 from get_researches_of_prof import ProfResearches
+from get_summary_of_abstract import AbstractAndEmailFinder
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class EmailCreater:

@@ -2,7 +2,7 @@ import logging
 import pandas as pd
 import chainlit as cl
 from PyPDF2 import PdfReader
-from helper import EmailCreater, EmailFinder
+from helper import EmailCreater, EmailFinder, AbstractAndEmailFinder
 from weather import get_current_weather
 from random_joke import get_random_joke
 from langchain_ollama import ChatOllama
@@ -153,20 +153,11 @@ def process_query(query: str, resume: str = None) -> str:
                 skills = extract_skills(resume)
                 df1 = EmailCreater(args['website'], args['location']).get_data()
 
-                df2 = EmailFinder(df1).get_emails()
-                df1 = pd.merge(df1, df2, on=['Professor Name', 'University Name'], how='outer')
+                df2,df3= AbstractAndEmailFinder(df1)
+                df3 = pd.merge(df3, df2, on=['Professor Name', 'University Name'], how='outer')
 
-                list_of_summary_of_researches = []
-                for _, row in df1.iterrows():
-                    all_researches = [row['Research 1'], row['Research 2'], row['Research 3']]
-                    summarized_researches = ""
-                    for research in all_researches:
-                        summarized_researches += create_abstract(research) + "\n"
 
-                    list_of_summary_of_researches.append(summarized_researches)
                 
-                research_df = pd.DataFrame(list_of_summary_of_researches, columns=['Research Summary'])
-                df3 = pd.concat([df1, research_df], axis=1)
 
                 list_of_emails = []
                 for _, row in df3.iterrows():
