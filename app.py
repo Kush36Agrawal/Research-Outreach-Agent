@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import chainlit as cl
 from PyPDF2 import PdfReader
@@ -22,7 +23,7 @@ prompt = ChatPromptTemplate.from_messages([
 ])
 
 # Function to process user queries
-async def process_query(query: str, resume: str = None) -> str:
+def process_query(query: str, resume: str = None) -> str:
     """
     Processes user queries by invoking the AI model and calling appropriate functions.
     """
@@ -43,7 +44,7 @@ async def process_query(query: str, resume: str = None) -> str:
             elif function_name == "get_conversational_response":
                 return args['response']
             elif function_name == "get_list_of_emails" and resume:
-                list_of_emails = await get_list_of_emails(args, resume)
+                list_of_emails = asyncio.run(get_list_of_emails(args, resume))
                 return list_of_emails[0]
 
     return result.content
@@ -113,7 +114,7 @@ async def main(message: cl.Message):
         resume = cl.user_session.get('resume')
         query = message.content
         if resume:
-            response = await process_query(query, resume)
+            response = process_query(query, resume)
             logging.info(f"Generated Response: {response}")
             await cl.Message(content=response).send()
         else:

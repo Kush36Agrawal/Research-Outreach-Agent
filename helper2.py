@@ -20,10 +20,9 @@ class ProfDataCreater:
         research_links_df = pd.DataFrame(research_links_df)
         research_links_df.columns = [f"Link {i+1}" for i in range(len(research_links_df.columns))]
 
-        df = pd.concat([df, research_links_df], axis=1)                                         # Concatenate research links DataFrame with the original DataFrame
+        df = pd.concat([df, research_links_df], axis=1)          # Concatenate research links DataFrame with the original DataFrame
 
-        processed_links_df = df[['Link 1', 'Link 2', 'Link 3']].map(self._process_link)         # Apply _process_link for vectorized processing
-        processed_links_df.columns = ['Research 1', 'Research 2', 'Research 3']
+        processed_links_df = await self._process_links_async(df)
 
         final_df = pd.concat([df, processed_links_df], axis=1)
 
@@ -37,19 +36,36 @@ class ProfDataCreater:
         prof_researches = ProfessorResearchesLink(prof_url)
         return await prof_researches.getProfResearchesLink()
     
-    def _get_prof_research(self, research_url: str) -> str:
+    async def _get_prof_research(self, research_url: str) -> str:
         research_abstract = ProfessorResearch(research_url)
-        return research_abstract.getProfResearch()
+        return await research_abstract.getProfResearch()
     
-    def _process_link(self, link: str):
-        return self._get_prof_research(link)
+    async def _process_links_async(self, df: pd.DataFrame) -> pd.DataFrame:
+        async def process_row(row):
+            # Use asyncio.gather to process all three links concurrently for each row
+            results = await asyncio.gather(
+                self._process_link(row['Link 1']),
+                self._process_link(row['Link 2']),
+                self._process_link(row['Link 3'])
+            )
+            return results
+
+        # Apply the async function to each row of the DataFrame
+        processed_rows = await asyncio.gather(*[process_row(row) for _, row in df.iterrows()])
+        
+        # Create a DataFrame from the processed results
+        processed_links_df = pd.DataFrame(processed_rows, columns=['Research 1', 'Research 2', 'Research 3'])
+        return processed_links_df
+    
+    async def _process_link(self, link: str):
+        return await self._get_prof_research(link)
 
 
 # Start Playwright
 class EmailAndAbstractFinder:
     """Finds the Emails of Professors and Abstracts of their Researches using Copilot."""
 
-    def __init__(self, df1: pd.DataFrame):
+    def __init__(self, df1: pd.DataFrame, resume: str):
         self.df1 = df1
         
         temp_df = df1[['Professor Name', 'University Name']].copy()
@@ -57,6 +73,7 @@ class EmailAndAbstractFinder:
         self.tables = temp_df.to_dict(orient='records')           # Convert the DataFrame into a list of dictionaries
 
         self.df = pd.DataFrame(columns=['Professor Name', 'University Name', 'Email Address'])
+        self.resume = resume
 
     async def get_emails_and_abstracts(self) -> pd.DataFrame :
 
@@ -69,7 +86,7 @@ class EmailAndAbstractFinder:
             await page.goto('https://copilot.microsoft.com/')
             
             try:
-                await asyncio.sleep(3)
+                await asyncio.sleep(5)
                 copilot_button = page.locator('//*[@id="userInput"]')
                 await copilot_button.click()
 
@@ -89,7 +106,7 @@ class EmailAndAbstractFinder:
                     input_field = page.locator('//textarea[@placeholder="Message Copilot"]')
                     await input_field.fill(f"Find email address of Professor {prof_name} in {university_name} University. "
                                            f"In an email address format username@domainname.extension. Output just the email address and nothing else.")
-                    await asyncio.sleep(1) 
+                    await asyncio.sleep(2) 
                     await input_field.press('Enter')
                 except Exception as e:
                     print(f"Error while filling the input field for {prof_name}: {e}")
@@ -121,11 +138,12 @@ class EmailAndAbstractFinder:
             # Find the input field and send the message
             input_field = page.locator('//textarea[@placeholder="Message Copilot"]')
             await input_field.fill(f"In the following messages I will provide you with chunks of my New HTML page source code. "
-                                   f"Please extract the New abstract from it. After all the chunks are completed I will explicitly send a message saying all chunks have been given.")
+                                   f"Please extract the New abstract from it. After all the chunks are completed I will explicitly send a message saying all chunks have been given."
+                                   f"Report me summary of the research only after I tell you don't answer it earlier.")
 
             await asyncio.sleep(2)
             await input_field.press('Enter')
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
 
             list_of_summary_of_researches = []
 
@@ -133,6 +151,7 @@ class EmailAndAbstractFinder:
                 all_researches = [row['Research 1'], row['Research 2'], row['Research 3']]
 
                 summarized_researches = ""
+
                 for research in all_researches:
                     chunks = self._chunk_text(research, 10000)
                     print(len(chunks))
@@ -142,31 +161,91 @@ class EmailAndAbstractFinder:
                         await input_field.fill(f"{chunk}")
                         await asyncio.sleep(6) 
                         await input_field.press('Enter')
+                        await asyncio.sleep(4)
 
                     input_field = page.locator('//textarea[@placeholder="Message Copilot"]')
                     await input_field.fill(f"All chunks have been given." 
                                            f"Now extract the abstract and provide directly the abstract and nothing like here is the abstract")
                     
-                    await asyncio.sleep(8) 
-
+                    await asyncio.sleep(2)
                     await input_field.press('Enter')
+                    await asyncio.sleep(8) 
 
                     output_locator = page.locator('//*[@id="app"]/main/div[2]/div/div/div[2]/div/div[2]')
                     await output_locator.wait_for(state='visible')  # Wait until the output is visible
 
                     copilot_output = await output_locator.text_content()
                     copilot_output = copilot_output[12:]  # Clean up the output
+
                     summarized_researches += copilot_output + "\n"
+
                 list_of_summary_of_researches.append(summarized_researches)
-            
-            # Close the browser after all tasks are complete
-            await browser.close()
 
             research_df = pd.DataFrame(list_of_summary_of_researches, columns=['Research Summary'])
             df3 = pd.concat([self.df1, research_df], axis=1)
             df3 = pd.merge(df3, self.df, on=['Professor Name', 'University Name'], how='outer')
 
-            return df3
+            copilot_button = page.locator('//*[@id="userInput"]')
+            copilot_button.click()
+
+            # Find the input field and send the message
+            prompt = (f"""
+                      My Resume: 
+                      {self.resume}.
+                      In the following messages, i will give you Professor's Research Abstract, Professor Name, University Name. For Each professor Generate a personalised email as soon as you receive these three things. Generate a polite and professional email body introducing yourself to the professor. In the email, mention the specific areas of research the professor is involved in and discuss them properly, and highlight the skills you have that are relevant to their work. Express your interest for collaboration or research with the professor. Make sure not to boast your skills too much. Make the email spam free, do not use spam keywords. 
+                      """)
+            chunks = self._chunk_text(research, 10000)
+
+            print (len(chunks))
+            for chunk in chunks:
+                input_field = page.locator('//textarea[@placeholder="Message Copilot"]')
+                # output_locator = page.locator('//*[@id="app"]/main/div[2]/div/div/div[2]/div/div[2]')
+                # output_locator.wait_for(state='visible')  # Wait until the output is visible
+                input_field.fill(f"{chunk}")
+                asyncio.sleep(5)
+                input_field.press('Enter')
+
+            list_of_emails=[]
+            
+            for _, row in df3.iterrows():
+                summarized_researches=row["Research Summary"]
+                professor_name=row["Professor Name"]
+                university_name=row["University Name"]
+
+                prompt = (f"""
+                Professor's Research Abstract:
+                {summarized_researches}
+                Professor Name:
+                {professor_name}
+                University Name:
+                {university_name}
+                Generate a personalized email to the professor. Give me just the Subject , Email body and nothing else and no ending words like I hope this helps, If you have any adjustments or additional information, feel free to share! or anything of this sort. """)
+                asyncio.sleep(5)
+
+
+                chunks=self._chunk_text(prompt, 10000)
+                print (len(chunks))
+                for chunk in chunks:
+                    input_field = page.locator('//textarea[@placeholder="Message Copilot"]')
+                    input_field.fill(f"{chunk}")
+                    asyncio.sleep(5)
+                    input_field.press('Enter')
+                    asyncio.sleep(1)
+
+                asyncio.sleep(5)
+                output_locator = page.locator('//*[@id="app"]/main/div[2]/div/div/div[2]/div/div[2]')
+                output_locator.wait_for(state='visible')  # Wait until the output is visible
+                copilot_output = output_locator.text_content()
+                copilot_output=copilot_output[12:]
+                print(copilot_output)
+                list_of_emails.append(copilot_output)
+
+            email_df = pd.DataFrame(list_of_emails, columns=['Email Body'])
+            final_df = pd.concat([df3, email_df], axis=1)
+
+            await browser.close()
+
+            return final_df
         
 
     def _chunk_text(self, text: str, max_chunk_size: int = 1000) -> list:
