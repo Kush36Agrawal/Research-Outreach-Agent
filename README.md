@@ -9,9 +9,15 @@
 - RAG
 - Computer Vision
 - Computer Use
--
 
 ## Interesting Builds
 
 - https://x.com/kregenrek/status/1865808159987601520
--
+
+## How to Use
+
+1) Clone the Repository
+2) Open the terminal and write: chainlit run app.py
+3) Upload your resume within 10 sec.
+4) Use query: "write emails to professor of {countries} from website www.csrankings.org" to begin email writing process.
+5) Sit and wait for final csv file to get prepared.

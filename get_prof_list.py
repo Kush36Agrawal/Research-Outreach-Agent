@@ -1,11 +1,11 @@
-import time
+import asyncio
 import pandas as pd
 from bs4 import BeautifulSoup
+from typing import Tuple, Union
 from urllib.parse import urlparse
 from playwright.async_api import async_playwright
-import asyncio
 
-def region_code(region):
+def region_code(region: str) -> str:
     locations = {
         "Argentina": "ar",
         "Australia": "au",
@@ -74,7 +74,7 @@ def region_code(region):
     }
     return locations.get(region, "unknown")  # Default to "unknown" if the region is not found
 
-def is_valid_url(url):
+def is_valid_url(url) -> Tuple[Union[str, None], bool]:
     """Check if the provided URL is valid and ensure it starts with 'https://'."""
     
     if not url.lower().startswith('https://'):      # Step 1: Ensure the URL starts with 'https://'
@@ -88,20 +88,21 @@ def is_valid_url(url):
         if (result.scheme and result.netloc):
             return url, True                        # Return the corrected URL and True if valid
         else:
-            return False
+            return None, False
         
     except Exception as e:
-        return False                                # Return False if the URL is invalid                      
+        return None, False                                # Return False if the URL is invalid                      
 
 class ProfessorList:
     """Fetch the list of professors from the given URL and regions and return a dataframe."""
     
-    def __init__(self, url, regions):
+    def __init__(self, url: str, regions: list):
         self.url = url
         self.regions = regions
+        print(regions)
         self.df = pd.DataFrame(columns=['Professor Name', 'Region', 'University Name', 'DBLP Link'])
         
-    async def getProfList(self):
+    async def getProfList(self) -> pd.DataFrame :
         self.url, flag = is_valid_url(self.url)
         if not flag:
             print("Invalid URL")
@@ -109,10 +110,10 @@ class ProfessorList:
         
         try:
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=False)
+                browser = await p.chromium.launch(headless=True)
                 context = await browser.new_context(
-                    geolocation=None,  # Deny geolocation (if necessary, but it's optional)
-                    permissions=["geolocation"],  # Denying geolocation by using the permissions array format
+                    geolocation=None,               # Deny geolocation (if necessary, but it's optional)
+                    permissions=["geolocation"],    # Denying geolocation by using the permissions array format
                 )
                 page = await context.new_page()
                 
@@ -124,11 +125,11 @@ class ProfessorList:
 
                         # Wait for dynamic content to load (adjust the wait time or condition based on the page)
                         await page.wait_for_selector("body")
-                        time.sleep(2)
+                        await asyncio.sleep(2)
 
                         option_text = region
                         await page.wait_for_timeout(2000)  # Give some time for the content to load
-                        time.sleep(2)
+                        await asyncio.sleep(2)
                         page_content = await page.content()
                         soup = BeautifulSoup(page_content, 'html.parser')
 

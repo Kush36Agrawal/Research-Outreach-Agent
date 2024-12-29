@@ -6,7 +6,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 
-def is_valid_url(url):
+def is_valid_url(url: str) -> bool:
     """Check if the provided URL is valid and ensure it starts with 'https://'."""
 
     if not url.lower().startswith('https://'):      # Step 1: Ensure the URL starts with 'https://'
@@ -18,13 +18,13 @@ def is_valid_url(url):
     except:
         return False
 
-class ResearchAbstract():
+class ProfessorResearch():
     """Fetch the webpage content, extract readable text, and capture all redirecting elements within the text."""
 
-    def __init__(self, url):
+    def __init__(self, url: str):
         self.url=url
 
-    def getResearchAbstract(self):
+    def getProfResearch(self) -> str:
 
         if not is_valid_url(self.url):
             print("Error: Invalid URL")

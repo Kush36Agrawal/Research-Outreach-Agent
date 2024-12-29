@@ -71,8 +71,12 @@ def get_current_weather(location: str, unit: str = "celsius") -> str:
             current_weather = weather_data["current_weather"]
             temp = current_weather["temperature"]
             wind_speed = current_weather["windspeed"]
-
-            result = f"The current weather in {location} is {temp}°{unit.upper()} with a wind speed of {wind_speed} km/h."
+            if (unit.upper() == "FAHRENHEIT"):
+                unit = "F"
+            else:
+                unit = "C"
+        
+            result = f"The current weather in {location} is {temp}°{unit} with a wind speed of {wind_speed} km/h."
             logging.info(f"Weather result: {result}")
             return result
         else:

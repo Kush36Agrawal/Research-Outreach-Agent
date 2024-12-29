@@ -1,9 +1,8 @@
-import asyncio
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 from playwright.async_api import async_playwright
 
-def is_valid_url(url):
+def is_valid_url(url: str) -> bool:
     """Check if the provided URL is valid and ensure it starts with 'https://'."""
 
     if not url.lower().startswith('https://'):      # Step 1: Ensure the URL starts with 'https://'
@@ -15,13 +14,13 @@ def is_valid_url(url):
     except:
         return False
 
-class ProfResearches:
+class ProfessorResearchesLink:
     """Fetch the Research Links of Prof using DBLP Link."""
     
-    def __init__(self, url):
+    def __init__(self, url: str):
         self.url = url
 
-    async def getProfResearches(self):
+    async def getProfResearchesLink(self) -> list:
         if not is_valid_url(self.url):
             print("Error: Invalid URL")
             return None
@@ -30,7 +29,7 @@ class ProfResearches:
         try:
             # Initialize Playwright and open the browser
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=False)
+                browser = await p.chromium.launch(headless=True)
                 page = await browser.new_page()
 
                 # Navigate to the URL
@@ -68,12 +67,3 @@ class ProfResearches:
         except Exception as e:
             print(f"Error: {str(e)}")
             return None
-
-# # Example usage:
-# async def main():
-#     prof_researches = ProfResearches("https://dblp.org/pid/24/5051.html")
-#     research_links = await prof_researches.getProfResearches()
-#     print(research_links)
-
-# # Run the async function
-# asyncio.run(main())
