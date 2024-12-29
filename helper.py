@@ -1,5 +1,6 @@
 import asyncio
 import textwrap
+import time
 import pandas as pd
 from get_prof_list import ProfessorList
 from get_abstract import ProfessorResearch
@@ -46,8 +47,8 @@ class ProfDataCreater:
 
 
 # Start Playwright
-class EmailAndAbstractFinder:
-    """Finds the Emails of Professors and Abstracts of their Researches using Copilot."""
+class EmailAndAbstractFinderAndEmailGenerator:
+    """Finds the Emails of Professors and Abstracts of their Researches and then Genreates a Personalised Email using Copilot."""
 
     def __init__(self, df1: pd.DataFrame):
         self.df1 = df1
@@ -58,7 +59,7 @@ class EmailAndAbstractFinder:
 
         self.df = pd.DataFrame(columns=['Professor Name', 'University Name', 'Email Address'])
 
-    async def get_emails_and_abstracts(self) -> pd.DataFrame :
+    async def get_emails_and_abstracts_and_generate_email(self) -> pd.DataFrame :
 
         async with async_playwright() as p:
 
@@ -158,13 +159,82 @@ class EmailAndAbstractFinder:
                     copilot_output = copilot_output[12:]  # Clean up the output
                     summarized_researches += copilot_output + "\n"
                 list_of_summary_of_researches.append(summarized_researches)
-            
-            # Close the browser after all tasks are complete
-            await browser.close()
+
 
             research_df = pd.DataFrame(list_of_summary_of_researches, columns=['Research Summary'])
             df3 = pd.concat([self.df1, research_df], axis=1)
             df3 = pd.merge(df3, self.df, on=['Professor Name', 'University Name'], how='outer')
+            
+
+
+            copilot_button = page.locator('//*[@id="userInput"]')
+            copilot_button.click()
+
+            # Wait for the textarea to be visible
+            # time.sleep(10)  # Wait for the textarea to be visible
+
+            # Find the input field and send the message
+            prompt = (f"""
+                      My Resume: 
+                      {resume}.
+                      In the following messages, i will give you Professor's Research Abstract, Professor Name, University Name. For Each professor Generate a personalised email as soon as you receive these three things.generate a polite and professional email body introducing yourself to the professor. In the email, mention the specific areas of research the professor is involved in and discuss them properly, and highlight the skills you have that are relevant to their work. Express your interest for collaboration or research with the professor. Make sure not to boast your skills too much. Make the email spam free, do not use spam keywords. 
+                      """)
+            chunks = self._chunk_text(research, 10000)
+
+            print (len(chunks))
+            for chunk in chunks:
+                input_field = page.locator('//textarea[@placeholder="Message Copilot"]')
+                # output_locator = page.locator('//*[@id="app"]/main/div[2]/div/div/div[2]/div/div[2]')
+                # output_locator.wait_for(state='visible')  # Wait until the output is visible
+                input_field.fill(f"{chunk}")
+                time.sleep(5)
+                input_field.press('Enter')
+
+            list_of_emails=[]
+            
+            for _, row in df3.iterrows():
+                summarized_researches=row["Research Summary"]
+                professor_name=row["Professor Name"]
+                university_name=row["University Name"]
+
+                prompt = (f"""
+                Professor's Research Abstract:
+                {summarized_researches}
+                Professor Name:
+                {professor_name}
+                University Name:
+                {university_name}
+                Generate a personalized email to the professor. Give me just the Subject , Email body and nothing else and no ending words like I hope this helps, If you have any adjustments or additional information, feel free to share! or anything of this sort. """)
+                time.sleep(5)
+
+
+                chunks=self._chunk_text(prompt,10000 )
+                print (len(chunks))
+                for chunk in chunks:
+                    input_field = page.locator('//textarea[@placeholder="Message Copilot"]')
+                    # output_locator = page.locator('//*[@id="app"]/main/div[2]/div/div/div[2]/div/div[2]')
+                    # output_locator.wait_for(state='visible')  # Wait until the output is visible
+                    input_field.fill(f"{chunk}")
+                    time.sleep(5)
+                    input_field.press('Enter')
+                    # time.sleep(1)
+                # input_field = page.locator('//textarea[@placeholder="Message Copilot"]')
+
+                # input_field.fill(" All chunks have been given. Now extract the abstract and provide directly the abstract and nothing like here is the abstract ")
+                time.sleep(5)
+                output_locator = page.locator('//*[@id="app"]/main/div[2]/div/div/div[2]/div/div[2]')
+                output_locator.wait_for(state='visible')  # Wait until the output is visible
+                copilot_output = output_locator.text_content()
+                copilot_output=copilot_output[12:]
+                print(copilot_output)
+                list_of_emails.append(copilot_output)
+
+            df3 = pd.concat([df3, list_of_emails], axis=1)
+
+            # Close the browser after all tasks are complete
+            await browser.close()
+
+
 
             return df3
         
