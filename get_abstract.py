@@ -1,9 +1,7 @@
 import re
 from bs4 import BeautifulSoup
-from selenium import webdriver
+from playwright.sync_api import sync_playwright
 from urllib.parse import urlparse
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 
 
 def is_valid_url(url: str) -> bool:
@@ -18,29 +16,34 @@ def is_valid_url(url: str) -> bool:
     except:
         return False
 
-class ProfessorResearch():
+
+class ProfessorResearch:
     """Fetch the webpage content, extract readable text, and capture all redirecting elements within the text."""
 
     def __init__(self, url: str):
-        self.url=url
+        self.url = url
 
     def getProfResearch(self) -> str:
-
         if not is_valid_url(self.url):
             print("Error: Invalid URL")
             return None
+
         print(self.url)
 
         try:
-            options = webdriver.ChromeOptions()
-            options.add_argument("--headless")
-            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        
-            driver.get(self.url)
-            
-            page_content = driver.page_source
+            with sync_playwright() as p:
+                # Launch a headless browser
+                browser = p.chromium.launch(headless=False)
+                page = browser.new_page()
+                
+                # Navigate to the URL
+                page.goto(self.url, timeout=60000)  # Set a timeout of 60 seconds
+                
+                # Get the page content
+                page_content = page.content()
 
-            driver.quit()
+                # Close the browser
+                browser.close()
 
             # Create BeautifulSoup object from the page source
             soup = BeautifulSoup(page_content, 'html.parser')
