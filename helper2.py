@@ -41,18 +41,18 @@ class ProfDataCreater:
         return await research_abstract.getProfResearch()
     
     async def _process_links_async(self, df: pd.DataFrame) -> pd.DataFrame:
-        async def process_row(row):
-            # Use asyncio.gather to process all three links concurrently for each row
+        processed_rows = []
+
+        for _, row in df.iterrows():
+            # Process all three links for the current row
             results = await asyncio.gather(
                 self._process_link(row['Link 1']),
                 self._process_link(row['Link 2']),
                 self._process_link(row['Link 3'])
             )
-            return results
+            processed_rows.append(results)
+            await asyncio.sleep(10) # Wait for 15 seconds before processing each row
 
-        # Apply the async function to each row of the DataFrame
-        processed_rows = await asyncio.gather(*[process_row(row) for _, row in df.iterrows()])
-        
         # Create a DataFrame from the processed results
         processed_links_df = pd.DataFrame(processed_rows, columns=['Research 1', 'Research 2', 'Research 3'])
         return processed_links_df

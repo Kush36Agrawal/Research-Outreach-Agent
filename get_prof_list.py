@@ -166,7 +166,7 @@ class ProfessorList:
                 
                 await browser.close()
 
-            return self.df
+            return self.df.head(2)
         
         except Exception as e:
             print(f"Error: {str(e)}")
