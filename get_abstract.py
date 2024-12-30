@@ -35,7 +35,10 @@ class ProfessorResearch:
                 
                 # Navigate to the URL
                 await page.goto(self.url, timeout=60000)  # Set a timeout of 60 seconds
-                
+
+                # Wait for the page to load by waiting for a specific selector (e.g., <body> tag)
+                await page.wait_for_selector('body', timeout=60000)  
+
                 # Get the page content
                 page_content = await page.content()
 
