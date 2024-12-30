@@ -2,8 +2,8 @@ import logging
 import pandas as pd
 from langchain_ollama import ChatOllama
 from langchain.prompts import ChatPromptTemplate
-# from helper1 import ProfDataCreater, EmailAndAbstractFinder       # Uncomment to use with Ollama
-from helper2 import ProfDataCreater, EmailAndAbstractFinder
+from helper1 import ProfDataCreater, EmailAndAbstractFinder       # Uncomment to use with Ollama
+# from helper2 import ProfDataCreater, EmailAndAbstractFinder
 
 model1 = ChatOllama(model="llama3.2:3b", temperature=0.5, num_ctx=2048)
 model2 = ChatOllama(model="llama3.2:3b", temperature=0.6, num_ctx=8192)
@@ -58,22 +58,22 @@ async def get_list_of_emails(args, resume: str) -> list:
     """
 
     # Uncomment this line to extract skills from resume using Ollama
-    # skills = extract_skills(resume)
-
+    skills = extract_skills(resume)
     df1 = await ProfDataCreater(args['website'], args['location']).get_data()
-    df2 = await EmailAndAbstractFinder(df1, resume).get_emails_and_abstracts()
-
-    # Uncomment this line to generate email using Ollama
-    # list_of_emails = []
-    # for _, row in df2.iterrows():
-    #     email = generate_email(row['Research Summary'], skills)
-    #     list_of_emails.append(email)
+    df2 = await EmailAndAbstractFinder(df1).get_emails_and_abstracts()
+    list_of_emails = []
+    for _, row in df2.iterrows():
+        email = generate_email(row['Research Summary'], skills)
+        list_of_emails.append(email)
     
-    # email_df = pd.DataFrame(list_of_emails, columns=['Email Body'])
-    # final_df = pd.concat([df2, email_df], axis=1)
-    # final_df.to_csv('final_df.csv', index=False)
+    email_df = pd.DataFrame(list_of_emails, columns=['Email Body'])
+    final_df = pd.concat([df2, email_df], axis=1)
+    final_df.to_csv('final_df.csv', index=False)
     
-    # return list_of_emails
+    return list_of_emails
 
-    df2.to_csv('final_df.csv')
-    return [df2['Email Body'][0]]
+    # df1 = await ProfDataCreater(args['website'], args['location']).get_data()
+    # df2 = await EmailAndAbstractFinder(df1, resume).get_emails_and_abstracts()
+
+    # df2.to_csv('final_df.csv')
+    # return [df2['Email Body'][0]]
