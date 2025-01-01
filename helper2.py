@@ -16,7 +16,11 @@ class ProfDataCreater:
     async def get_data(self) -> pd.DataFrame :
 
         df = await self._get_prof_list()
-        research_links_df = await asyncio.gather(*[self._get_prof_researches_link(link) for link in df['DBLP Link']])
+        research_links_df = []
+        for link in df['DBLP Link']:
+            result = await self._get_prof_researches_link(link)
+            research_links_df.append(result)
+            await asyncio.sleep(6)
         research_links_df = pd.DataFrame(research_links_df)
         research_links_df.columns = [f"Link {i+1}" for i in range(len(research_links_df.columns))]
 
@@ -130,6 +134,8 @@ class EmailAndAbstractFinder:
                     print(f"Error while extracting output for {prof_name}: {e}")
 
                 await asyncio.sleep(2)  # Wait before processing the next request
+            self.df.to_csv("Emails_Save.csv")
+
 
             # Click the Copilot button (you can adjust the selector if needed)
             copilot_button = page.locator('//*[@id="userInput"]')
@@ -184,33 +190,35 @@ class EmailAndAbstractFinder:
             research_df = pd.DataFrame(list_of_summary_of_researches, columns=['Research Summary'])
             df3 = pd.concat([self.df1, research_df], axis=1)
             df3 = pd.merge(df3, self.df, on=['Professor Name', 'University Name'], how='outer')
+            df3.to_csv("Emails_and_Absract_Save.csv")
 
             copilot_button = page.locator('//*[@id="userInput"]')
-            copilot_button.click()
+            await copilot_button.click()
 
-            # Find the input field and send the message
+            # Initial message to start the process
             prompt = (f"""
-                      My Resume: 
-                      {self.resume}.
-                      In the following messages, i will give you Professor's Research Abstract, Professor Name, University Name. For Each professor Generate a personalised email as soon as you receive these three things. Generate a polite and professional email body introducing yourself to the professor. In the email, mention the specific areas of research the professor is involved in and discuss them properly, and highlight the skills you have that are relevant to their work. Express your interest for collaboration or research with the professor. Make sure not to boast your skills too much. Make the email spam free, do not use spam keywords. 
-                      """)
-            chunks = self._chunk_text(research, 10000)
+                    My Resume: 
+                    {self.resume}.
+                    In the following messages, I will give you Professor's Research Abstract, Professor Name, University Name. For Each professor, generate a personalized email as soon as you receive these three things. Generate a polite and professional email body introducing yourself to the professor. In the email, mention the specific areas of research the professor is involved in and discuss them properly, and highlight the skills you have that are relevant to their work. Express your interest for collaboration or research with the professor. Make sure not to boast your skills too much. Make the email spam-free, do not use spam keywords.
+                    """)
+            
+            chunks = self._chunk_text(prompt, 10000)
+            print(len(chunks))
 
-            print (len(chunks))
+            # Send the prompt in chunks
             for chunk in chunks:
                 input_field = page.locator('//textarea[@placeholder="Message Copilot"]')
-                # output_locator = page.locator('//*[@id="app"]/main/div[2]/div/div/div[2]/div/div[2]')
-                # output_locator.wait_for(state='visible')  # Wait until the output is visible
-                input_field.fill(f"{chunk}")
-                asyncio.sleep(5)
-                input_field.press('Enter')
+                await input_field.fill(chunk)
+                await asyncio.sleep(5)
+                await input_field.press('Enter')
 
-            list_of_emails=[]
-            
+            list_of_emails = []
+
+            # Iterate over rows in the DataFrame to generate emails
             for _, row in df3.iterrows():
-                summarized_researches=row["Research Summary"]
-                professor_name=row["Professor Name"]
-                university_name=row["University Name"]
+                summarized_researches = row["Research Summary"]
+                professor_name = row["Professor Name"]
+                university_name = row["University Name"]
 
                 prompt = (f"""
                 Professor's Research Abstract:
@@ -219,39 +227,44 @@ class EmailAndAbstractFinder:
                 {professor_name}
                 University Name:
                 {university_name}
-                Generate a personalized email to the professor. Give me just the Subject , Email body and nothing else and no ending words like I hope this helps, If you have any adjustments or additional information, feel free to share! or anything of this sort. """)
-                asyncio.sleep(5)
+                Generate a personalized email to the professor. Give me just the Subject, Email body, and nothing else. Do not add ending phrases like 'I hope this helps' or anything of the sort.
+                """)
 
+                await asyncio.sleep(5)
 
-                chunks=self._chunk_text(prompt, 10000)
-                print (len(chunks))
+                chunks = self._chunk_text(prompt, 10000)
+                print(len(chunks))
+
+                # Send the prompt in chunks
                 for chunk in chunks:
                     input_field = page.locator('//textarea[@placeholder="Message Copilot"]')
-                    input_field.fill(f"{chunk}")
-                    asyncio.sleep(5)
-                    input_field.press('Enter')
-                    asyncio.sleep(1)
+                    await input_field.fill(chunk)
+                    await asyncio.sleep(5)
+                    await input_field.press('Enter')
+                    await asyncio.sleep(1)
 
-                asyncio.sleep(5)
+                # Wait for the output and retrieve it
+                await asyncio.sleep(5)
                 output_locator = page.locator('//*[@id="app"]/main/div[2]/div/div/div[2]/div/div[2]')
-                output_locator.wait_for(state='visible')  # Wait until the output is visible
-                copilot_output = output_locator.text_content()
-                copilot_output=copilot_output[12:]
+                await output_locator.wait_for(state='visible')  # Wait until the output is visible
+                copilot_output = await output_locator.text_content()
+                copilot_output = copilot_output[12:]  # Clean up the output
                 print(copilot_output)
                 list_of_emails.append(copilot_output)
 
+            # Create a DataFrame with the generated emails
             email_df = pd.DataFrame(list_of_emails, columns=['Email Body'])
             final_df = pd.concat([df3, email_df], axis=1)
 
+            # Close the browser
             await browser.close()
 
             return final_df
-        
 
     def _chunk_text(self, text: str, max_chunk_size: int = 1000) -> list:
         """
         Breaks a long text into chunks of a specified maximum size.
-        
+
         Args:
         - text (str): The input text to be split.
         - max_chunk_size (int): Maximum size of each chunk in characters (default 1000).
@@ -260,3 +273,4 @@ class EmailAndAbstractFinder:
         - List of text chunks.
         """
         return textwrap.wrap(text, max_chunk_size)
+    
