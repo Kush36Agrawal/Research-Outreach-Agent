@@ -157,7 +157,7 @@ class ProfessorList:
                                 link_url = a_tag["href"]
                                 if link_url.startswith("/"):
                                     link_url = urlparse(self.url)._replace(path=link_url).geturl()
-                                
+                                link_url+="&sortby=pubdate"
                                 new_row = pd.DataFrame([{'Professor Name': author_name, 'Region': option_text, 'University Name': university_name, 'DBLP Link': link_url}])
                                 self.df = pd.concat([self.df, new_row], ignore_index=True)
                     
