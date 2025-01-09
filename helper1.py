@@ -1,10 +1,10 @@
+import time
+import random
 import asyncio
-import textwrap
 import pandas as pd
 from get_prof_list import ProfessorList
-from get_abstract import ProfessorResearch
+from get_abstract1 import ProfessorResearch
 from playwright.async_api import async_playwright
-from get_researches_of_prof import ProfessorResearchesLink
 
 class ProfDataCreater:
     """Creates a DataFrame with the List of Professors and their Researches"""
@@ -15,50 +15,26 @@ class ProfDataCreater:
 
     async def get_data(self) -> pd.DataFrame :
 
-        df = await self._get_prof_list()
-        research_links_df = await asyncio.gather(*[self._get_prof_researches_link(link) for link in df['DBLP Link']])
-        research_links_df = pd.DataFrame(research_links_df)
-        research_links_df.columns = [f"Link {i+1}" for i in range(len(research_links_df.columns))]
+        df = await self._get_prof_list(self.url, self.regions)
 
-        df = pd.concat([df, research_links_df], axis=1)          # Concatenate research links DataFrame with the original DataFrame
+        researches = []
+        # Iterate over each link and add a random delay between 8 to 12 seconds
+        for link in df['DBLP Link']:
+            researches.append(self._get_prof_research(link))
 
-        processed_links_df = await self._process_links_async(df)
-
-        final_df = pd.concat([df, processed_links_df], axis=1)
+        # Convert the list of results into a DataFrame
+        researches = pd.DataFrame(researches, columns=['Research Summary'])
+        final_df = pd.concat([df, researches], axis=1)
 
         return final_df
 
-    async def _get_prof_list(self) -> pd.DataFrame:
-        prof_list = ProfessorList(self.url, self.regions)
+    async def _get_prof_list(self, url: str, regions: list) -> pd.DataFrame:
+        prof_list = ProfessorList(url, regions)
         return await prof_list.getProfList()
     
-    async def _get_prof_researches_link(self, prof_url: str) -> list:
-        prof_researches = ProfessorResearchesLink(prof_url)
-        return await prof_researches.getProfResearchesLink()
-    
-    async def _get_prof_research(self, research_url: str) -> str:
-        research_abstract = ProfessorResearch(research_url)
-        return await research_abstract.getProfResearch()
-    
-    async def _process_links_async(self, df: pd.DataFrame) -> pd.DataFrame:
-        processed_rows = []
-
-        for _, row in df.iterrows():
-            # Process all three links for the current row
-            results = await asyncio.gather(
-                self._process_link(row['Link 1']),
-                self._process_link(row['Link 2']),
-                self._process_link(row['Link 3'])
-            )
-            processed_rows.append(results)
-            await asyncio.sleep(10) # Wait for 10 seconds before processing each row
-
-        # Create a DataFrame from the processed results
-        processed_links_df = pd.DataFrame(processed_rows, columns=['Research 1', 'Research 2', 'Research 3'])
-        return processed_links_df
-    
-    async def _process_link(self, link: str):
-        return await self._get_prof_research(link)
+    def _get_prof_research(self, prof_url: str) -> list:
+        prof_researches = ProfessorResearch(prof_url)
+        return prof_researches.getProfResearch()
 
 
 # Start Playwright
@@ -74,7 +50,7 @@ class EmailAndAbstractFinder:
 
         self.df = pd.DataFrame(columns=['Professor Name', 'University Name', 'Email Address'])
 
-    async def get_emails_and_abstracts_and_generate_email(self) -> pd.DataFrame :
+    async def get_emails_and_abstracts(self) -> pd.DataFrame :
 
         async with async_playwright() as p:
 
@@ -85,7 +61,7 @@ class EmailAndAbstractFinder:
             await page.goto('https://copilot.microsoft.com/')
             
             try:
-                await asyncio.sleep(5)
+                await asyncio.sleep(50)
                 copilot_button = page.locator('//*[@id="userInput"]')
                 await copilot_button.click()
 
@@ -130,76 +106,6 @@ class EmailAndAbstractFinder:
 
                 await asyncio.sleep(2)  # Wait before processing the next request
 
-            # Click the Copilot button (you can adjust the selector if needed)
-            copilot_button = page.locator('//*[@id="userInput"]')
-            await copilot_button.click()
-
-            # Find the input field and send the message
-            input_field = page.locator('//textarea[@placeholder="Message Copilot"]')
-            await input_field.fill(f"In the following messages I will provide you with chunks of my New HTML page source code. "
-                                   f"Please extract the New abstract from it. After all the chunks are completed I will explicitly send a message saying all chunks have been given."
-                                   f"Report me summary of the research only after I tell you don't answer it earlier."
-                                   f"Also don't make the summary very large. Keep it concise so that it covers major portion of research")
-
-            await asyncio.sleep(3)
-            await input_field.press('Enter')
-            await asyncio.sleep(3)
-
-            list_of_summary_of_researches = []
-
-            for _, row in self.df1.iterrows():
-                all_researches = [row['Research 1'], row['Research 2'], row['Research 3']]
-
-                summarized_researches = ""
-                for research in all_researches:
-                    chunks = self._chunk_text(research, 9500)
-                    print(len(chunks))
-
-                    for chunk in chunks:
-                        input_field = page.locator('//textarea[@placeholder="Message Copilot"]')
-                        await input_field.fill(f"{chunk}")
-                        await asyncio.sleep(6) 
-                        await input_field.press('Enter')
-                        await asyncio.sleep(4)
-
-                    input_field = page.locator('//textarea[@placeholder="Message Copilot"]')
-                    await input_field.fill(f"All chunks have been given." 
-                                           f"Now extract the abstract and provide directly the abstract and nothing like here is the abstract."
-                                           f"In the next message I might ask you to summarize another research. So, be ready for that.")
-                    
-                    await asyncio.sleep(4) 
-                    await input_field.press('Enter')
-                    await asyncio.sleep(8) 
-
-                    output_locator = page.locator('//*[@id="app"]/main/div[2]/div/div/div[2]/div/div[2]')
-                    await output_locator.wait_for(state='visible')  # Wait until the output is visible
-
-                    copilot_output = await output_locator.text_content()
-                    copilot_output = copilot_output[12:]  # Clean up the output
-                    summarized_researches += copilot_output + "\n"
-                list_of_summary_of_researches.append(summarized_researches)
-            
-            # Close the browser after all tasks are complete
             await browser.close()
 
-            research_df = pd.DataFrame(list_of_summary_of_researches, columns=['Research Summary'])
-            df3 = pd.concat([self.df1, research_df], axis=1)
-            df3 = pd.merge(df3, self.df, on=['Professor Name', 'University Name'], how='outer')
-
-            return df3
-        
-
-    def _chunk_text(self, text: str ="", max_chunk_size: int = 1000) -> list:
-        """
-        Breaks a long text into chunks of a specified maximum size.
-        
-        Args:
-        - text (str): The input text to be split.
-        - max_chunk_size (int): Maximum size of each chunk in characters (default 1000).
-
-        Returns:
-        - List of text chunks.
-        """
-        if text is None:
-            text = "" 
-        return textwrap.wrap(text, max_chunk_size)
+            return self.df

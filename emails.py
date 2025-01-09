@@ -57,23 +57,25 @@ async def get_list_of_emails(args, resume: str) -> list:
     - list_of_emails: A list of email bodies.
     """
 
-    # Uncomment this line to extract skills from resume using Ollama
-    # skills = extract_skills(resume)
-    # df1 = await ProfDataCreater(args['website'], args['location']).get_data()
-    # df2 = await EmailAndAbstractFinder(df1).get_emails_and_abstracts()
-    # list_of_emails = []
-    # for _, row in df2.iterrows():
-    #     email = generate_email(row['Research Summary'], skills)
-    #     list_of_emails.append(email)
-    
-    # email_df = pd.DataFrame(list_of_emails, columns=['Email Body'])
-    # final_df = pd.concat([df2, email_df], axis=1)
-    # final_df.to_csv('final_df.csv', index=False)
-    
-    # return list_of_emails
-
+    # Uncomment these lines to extract skills from resume using Ollama
+    skills = extract_skills(resume)
     df1 = await ProfDataCreater(args['website'], args['location']).get_data()
-    df2 = await EmailAndAbstractFinder(df1, resume).get_emails_and_abstracts()
+    df1.to_csv('prof_data.csv')
+    df2 = await EmailAndAbstractFinder(df1).get_emails_and_abstracts()
+    list_of_emails = []
+    for _, row in df2.iterrows():
+        email = generate_email(row['Research Summary'], skills)
+        list_of_emails.append(email)
+    
+    email_df = pd.DataFrame(list_of_emails, columns=['Email Body'])
+    final_df = pd.concat([df2, email_df], axis=1)
+    final_df.to_csv('final_df.csv', index=False)
+    
+    return list_of_emails
 
-    df2.to_csv('final_df.csv')
-    return [df2['Email Body'][0]]
+    # df1 = await ProfDataCreater(args['website'], args['location']).get_data()
+    # df1.to_csv('prof_data.csv')
+    # df2 = await EmailAndAbstractFinder(df1, resume).get_emails_and_abstracts()
+
+    # df2.to_csv('final_df.csv')
+    # return [df2['Email Body'][0]]

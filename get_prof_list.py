@@ -80,8 +80,8 @@ def is_valid_url(url) -> Tuple[Union[str, None], bool]:
     if not url.lower().startswith('https://'):      # Step 1: Ensure the URL starts with 'https://'
         url = 'https://' + url
 
-    if not url.lower().endswith('/#/index?all'):     # Step 2: Ensure the URL ends with '.html'
-        url = url + '/#/index?all'
+    if not url.lower().endswith('/#/index?ai&vision&mlmining&nlp&inforet&act'):     # Step 2: Ensure the URL ends with '.html'
+        url = url + '/#/index?ai&vision&mlmining&nlp&inforet&act'
 
     try:                                            # Step 3: Validate the URL
         result = urlparse(url)
@@ -153,11 +153,12 @@ class ProfessorList:
                                         if "toggleFaculty" in university_span.get("onclick", ""):
                                             university_name = university_span.get_text(strip=True)
 
-                            if ("title" in a_tag.attrs and "Click for author's DBLP entry." in a_tag["title"]):
+                            if ("title" in a_tag.attrs and "Click for author's Google Scholar page." in a_tag["title"]):
                                 link_url = a_tag["href"]
                                 if link_url.startswith("/"):
                                     link_url = urlparse(self.url)._replace(path=link_url).geturl()
                                 
+                                link_url+="&sortby=pubdate"
                                 new_row = pd.DataFrame([{'Professor Name': author_name, 'Region': option_text, 'University Name': university_name, 'DBLP Link': link_url}])
                                 self.df = pd.concat([self.df, new_row], ignore_index=True)
                     
@@ -166,7 +167,7 @@ class ProfessorList:
                 
                 await browser.close()
 
-            return self.df.head(2)
+            return self.df
         
         except Exception as e:
             print(f"Error: {str(e)}")
