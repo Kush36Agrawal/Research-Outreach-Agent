@@ -154,6 +154,7 @@ class ProfessorList:
                                             university_name = university_span.get_text(strip=True)
 
                             if ("title" in a_tag.attrs and "Click for author's Google Scholar page." in a_tag["title"]):
+                            if ("title" in a_tag.attrs and "Click for author's Google Scholar page." in a_tag["title"]):
                                 link_url = a_tag["href"]
                                 if link_url.startswith("/"):
                                     link_url = urlparse(self.url)._replace(path=link_url).geturl()

@@ -193,8 +193,9 @@ class EmailAndAbstractFinder:
 
             copilot_button = page.locator('//*[@id="userInput"]')
             await copilot_button.click()
+            await copilot_button.click()
 
-            # Find the input field and send the message
+            # Initial message to start the process
             prompt = (f"""
                     My Resume: 
                     {self.resume}.
@@ -210,9 +211,13 @@ class EmailAndAbstractFinder:
                 await asyncio.sleep(5)
                 await input_field.press('Enter')
 
-            list_of_emails=[]
-            
+            list_of_emails = []
+
+            # Iterate over rows in the DataFrame to generate emails
             for _, row in df3.iterrows():
+                summarized_researches = row["Research Summary"]
+                professor_name = row["Professor Name"]
+                university_name = row["University Name"]
                 summarized_researches = row["Research Summary"]
                 professor_name = row["Professor Name"]
                 university_name = row["University Name"]
@@ -244,9 +249,11 @@ class EmailAndAbstractFinder:
                 print(copilot_output)
                 list_of_emails.append(copilot_output)
 
+            # Create a DataFrame with the generated emails
             email_df = pd.DataFrame(list_of_emails, columns=['Email Body'])
             final_df = pd.concat([df3, email_df], axis=1)
 
+            # Close the browser
             await browser.close()
 
             return final_df
@@ -255,7 +262,7 @@ class EmailAndAbstractFinder:
     def _chunk_text(self, text: str ="", max_chunk_size: int = 1000) -> list:
         """
         Breaks a long text into chunks of a specified maximum size.
-        
+
         Args:
         - text (str): The input text to be split.
         - max_chunk_size (int): Maximum size of each chunk in characters (default 1000).
@@ -266,3 +273,4 @@ class EmailAndAbstractFinder:
         if text is None:
             text = "" 
         return textwrap.wrap(text, max_chunk_size)
+    
