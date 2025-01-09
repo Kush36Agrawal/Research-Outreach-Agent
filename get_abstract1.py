@@ -16,7 +16,9 @@ class ProfessorResearch:
 
     def scrape_gsc(self, hyperlink):
         
-        time.sleep(random.uniform(8, 12))
+        delay = random.uniform(8, 12)  # Adjust the range as needed
+        print(f"Sleeping for {delay:.2f} seconds...")
+        time.sleep(delay)
         response = requests.get(hyperlink, headers=headers)
 
         soup = BeautifulSoup(response.text, "html.parser")
@@ -47,14 +49,14 @@ class ProfessorResearch:
         return None
 
 
-    def getProfResearch(self, google_scholar_url):
+    def getProfResearch(self):
         """
         Extracts the first 10 research URLs from the given Google Scholar page URL,
         fetches the hyperlink from the title text of each, and calls `scrape()` with the hyperlink.
         """
 
         # Step 1: Fetch the Google Scholar page
-        response = requests.get(google_scholar_url, headers=headers)
+        response = requests.get(self.url, headers=headers)
 
         soup = BeautifulSoup(response.text, "html.parser")
         
@@ -67,6 +69,7 @@ class ProfessorResearch:
             a_tag = tr.find("a")  # Find the <a> tag inside the <tr>
             if a_tag and a_tag.get("href"):  # Ensure <a> tag and href exist
                 links.append(base_url + a_tag["href"])
+        links = links[:10]
 
         abstracts = []
         # Print the extracted links
@@ -78,5 +81,8 @@ class ProfessorResearch:
             if (abstract == 'Abstract not found'): continue
             else: abstracts.append(f"{len(abstracts) + 1}.) {abstract}")
 
+        if (len(abstracts) == 0):
+            return "No abstracts found."
+        
         abstracts = "\n".join(abstracts)
         return abstracts

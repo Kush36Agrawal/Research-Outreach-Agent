@@ -24,7 +24,8 @@ class ProfDataCreater:
 
         # Convert the list of results into a DataFrame
         researches = pd.DataFrame(researches, columns=['Research Summary'])
-        final_df = pd.concat([df, researches], axis=1)
+        final_df = pd.concat([df, researches], axis=1, ignore_index=True)
+        final_df.columns = ['Professor Name', 'Region', 'University Name', 'DBLP Link', 'Research Summary']
 
         return final_df
 
@@ -108,4 +109,5 @@ class EmailAndAbstractFinder:
 
             await browser.close()
 
-            return self.df
+            df2 = pd.merge(self.df1, self.df, on=['Professor Name', 'University Name'], how='outer')
+            return df2

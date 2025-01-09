@@ -2,8 +2,8 @@ import logging
 import pandas as pd
 from langchain_ollama import ChatOllama
 from langchain.prompts import ChatPromptTemplate
-# from helper1 import ProfDataCreater, EmailAndAbstractFinder       # Uncomment to use with Ollama
-from helper2 import ProfDataCreater, EmailAndAbstractFinder
+from helper1 import ProfDataCreater, EmailAndAbstractFinder       # Uncomment to use with Ollama
+# from helper2 import ProfDataCreater, EmailAndAbstractFinder
 
 model1 = ChatOllama(model="llama3.2:3b", temperature=0.5, num_ctx=2048)
 model2 = ChatOllama(model="llama3.2:3b", temperature=0.6, num_ctx=8192)

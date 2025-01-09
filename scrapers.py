@@ -109,5 +109,6 @@ def get_paper_details(paper_url):
             return 'Title not found', 'Abstract not found'
 
     except Exception as e:
+        print(f"An error occurred while processing the URL: {paper_url}")
         print(f"An error occurred: {e}")
         return None, None
