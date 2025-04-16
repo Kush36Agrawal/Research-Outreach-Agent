@@ -46,6 +46,8 @@ def process_query(query: str, resume: str = None) -> str:
             elif function_name == "get_list_of_emails" and resume:
                 list_of_emails = asyncio.run(get_list_of_emails(args, resume))
                 return list_of_emails[0]
+            elif function_name == "get_list_of_emails":
+                return "Please upload your Resume first to write Personalized Emails."
 
     return result.content
 
@@ -57,47 +59,12 @@ async def start():
     """
     logging.info("Chat started")
     cl.user_session.set("model", model1)
-
-    # Ask the user to upload a file
-    files = await cl.AskFileMessage(
-        content="Please upload the Resume to begin!",
-        accept=["application/pdf"],
-        max_size_mb=20,
-        timeout=10,  # Consider increasing the timeout if needed
+    
+    # Welcome message with instructions
+    await cl.Message(
+        content="""Welcome! I am your AI Assitant which can help you in writing Personalized Emails to Professors of Various Countries.
+        If you want to write a personalized email, please upload your Resume by first typing the command `/upload` & then upload Resume."""
     ).send()
-
-    if files is None or len(files) == 0:
-        # Handle the case where no file is uploaded or timeout occurs
-        await cl.Message(content="No file was uploaded or the upload timed out. Please try again.").send()
-        return
-
-    # Process the uploaded file
-    resume = files[0]
-    pdf_text = ""
-    msg = cl.Message(content=f"Processing `{resume.name}`...")
-    await msg.send()
-
-    try:
-        # Extract text from the PDF file
-        with open(resume.path, "rb") as file:
-            pdf_reader = PdfReader(file)
-            for page in pdf_reader.pages:
-                pdf_text += page.extract_text()
-
-        # Send the extracted text as a message
-        if pdf_text.strip():
-            msg = cl.Message(content=f"Extracted text from `{resume.name}`:\n{pdf_text}")
-        else:
-            msg = cl.Message(content=f"Could not extract text from `{resume.name}`. It may be a scanned image or empty.")
-        await msg.send()
-
-        # Store the resume in the session
-        cl.user_session.set("resume", pdf_text)
-
-    except Exception as e:
-        error_message = f"Error processing `{resume.name}`: {str(e)}"
-        logging.error(error_message)
-        await cl.Message(content=error_message).send()
 
 # Chainlit event handler for incoming messages
 @cl.on_message
@@ -110,13 +77,51 @@ async def main(message: cl.Message):
     """
     logging.info(f"Received message: {message.content}")
 
-    if message.content:
+    # Check if the message is the upload command
+    if message.content.strip().lower() == "/upload":
+        # Ask the user to upload a file
+        files = await cl.AskFileMessage(
+            content="Please upload the Resume",
+            accept=["application/pdf"],
+            max_size_mb=20,
+        ).send()
+
+        if files is None or len(files) == 0:
+            await cl.Message(content="No file was uploaded. You can try again later with the '/upload' command.").send()
+            return
+
+        # Process the uploaded file
+        resume = files[0]
+        pdf_text = ""
+        msg = cl.Message(content=f"Processing `{resume.name}`...")
+        await msg.send()
+
+        try:
+            # Extract text from the PDF file
+            with open(resume.path, "rb") as file:
+                pdf_reader = PdfReader(file)
+                for page in pdf_reader.pages:
+                    pdf_text += page.extract_text()
+
+            # Store the resume in the session
+            cl.user_session.set("resume", pdf_text)
+            
+            await cl.Message(content=f"Successfully processed `{resume.name}`. You can now ask questions about this resume.").send()
+        
+        except Exception as e:
+            error_message = f"Error processing `{resume.name}`: {str(e)}"
+            logging.error(error_message)
+            await cl.Message(content=error_message).send()
+    
+    # Handle regular messages
+    elif message.content:
         resume = cl.user_session.get('resume')
         query = message.content
+        
         if resume:
             response = process_query(query, resume)
-            logging.info(f"Generated Response: {response}")
-            await cl.Message(content=response).send()
         else:
-            # This should ideally never happen if resume was uploaded correctly
-            await cl.Message(content="Something went wrong while processing the resume. Please try again.").send()
+            response = process_query(query)
+
+        logging.info(f"Generated Response: {response}")
+        await cl.Message(content=response).send()
