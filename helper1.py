@@ -16,11 +16,11 @@ class ProfDataCreater:
     async def get_data(self) -> pd.DataFrame :
 
         df = await self._get_prof_list(self.url, self.regions)
-
+        df.to_csv('1stdf.csv', index=False)
         researches = []
         # Iterate over each link and add a random delay between 8 to 12 seconds
         for link in df['DBLP Link']:
-            researches.append(self._get_prof_research(link))
+            researches.append(await self._get_prof_research(link))
 
         # Convert the list of results into a DataFrame
         researches = pd.DataFrame(researches, columns=['Research Summary'])
@@ -33,9 +33,9 @@ class ProfDataCreater:
         prof_list = ProfessorList(url, regions)
         return await prof_list.getProfList()
     
-    def _get_prof_research(self, prof_url: str) -> list:
+    async def _get_prof_research(self, prof_url: str) -> list:
         prof_researches = ProfessorResearch(prof_url)
-        return prof_researches.getProfResearch()
+        return await prof_researches.getProfResearch()
 
 
 # Start Playwright
@@ -62,7 +62,7 @@ class EmailAndAbstractFinder:
             await page.goto('https://copilot.microsoft.com/')
             
             try:
-                await asyncio.sleep(50)
+                await asyncio.sleep(10)
                 copilot_button = page.locator('//*[@id="userInput"]')
                 await copilot_button.click()
 
@@ -91,12 +91,10 @@ class EmailAndAbstractFinder:
                 await asyncio.sleep(3)
 
                 try:
-                    output_locator = page.locator('//*[@id="app"]/main/div[2]/div/div/div[2]/div/div[2]')
-                    await output_locator.wait_for(state='visible')  # Wait until the output is visible
-
-                    # Extract and clean up the Copilot output
-                    copilot_output = await output_locator.text_content()
-                    copilot_output = copilot_output[12:]  # Remove unwanted text at the beginning
+                    await page.wait_for_selector("span.font-ligatures-none")
+        
+                    # Extract the text content
+                    copilot_output = await page.text_content("span.font-ligatures-none")
                     print(copilot_output)
 
                     new_row = pd.DataFrame([{'Professor Name': prof_name, 'University Name': university_name, 'Email Address': copilot_output}])

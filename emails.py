@@ -1,3 +1,4 @@
+import ast
 import logging
 import pandas as pd
 from langchain_ollama import ChatOllama
@@ -8,6 +9,32 @@ from helper1 import ProfDataCreater, EmailAndAbstractFinder       # Uncomment to
 model1 = ChatOllama(model="llama3.2:3b", temperature=0.5, num_ctx=2048)
 model2 = ChatOllama(model="llama3.2:3b", temperature=0.6, num_ctx=8192)
 model3 = ChatOllama(model="llama3.2:3b", temperature=0.4, num_ctx=2048)
+
+# Function to Normalize the input Locations
+def normalize_location_param(topic) -> list:
+    """
+    Ensures that the 'topic' parameter is always a list of strings.
+    If the model mistakenly returns a string, it converts it into a valid list.
+    """
+    if topic is None:
+        return []
+    
+    if isinstance(topic, list):
+        return topic  # Already a valid list
+    
+    if isinstance(topic, str):
+        try:
+            # Case 1: If it's a string representation of a list, safely evaluate it
+            parsed_topic = ast.literal_eval(topic)
+            if isinstance(parsed_topic, list):
+                return [t.strip() for t in parsed_topic if isinstance(t, str)]
+        except (SyntaxError, ValueError):
+            pass  # Not a list representation, move to next check
+        
+        # Case 2: If it's a comma-separated string, split it
+        return [t.strip() for t in topic.split(",") if t.strip()]
+
+    return []
 
 # Function to extract skills from resume
 def extract_skills(resume: str) -> str:
@@ -59,7 +86,8 @@ async def get_list_of_emails(args, resume: str) -> list:
 
     # Uncomment these lines to extract skills from resume using Ollama
     skills = extract_skills(resume)
-    df1 = await ProfDataCreater(args['website'], args['location']).get_data()
+    locations = normalize_location_param(args['location'])
+    df1 = await ProfDataCreater(args['website'], locations).get_data()
     df1.to_csv('prof_data.csv')
     df2 = await EmailAndAbstractFinder(df1).get_emails_and_abstracts()
     list_of_emails = []
