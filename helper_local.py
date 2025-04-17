@@ -42,7 +42,7 @@ class ProfDataCreater:
 class EmailAndAbstractFinder:
     """Finds the Emails of Professors and Abstracts of their Researches and then Genreates a Personalised Email using Copilot."""
 
-    def __init__(self, df1: pd.DataFrame):
+    def __init__(self, df1: pd.DataFrame, resume: str = None):
         self.df1 = df1
         
         temp_df = df1[['Professor Name', 'University Name']].copy()

@@ -119,11 +119,10 @@ class EmailAndAbstractFinder:
                 await asyncio.sleep(3)
 
                 try:
-                    output_locator = page.locator('//*[@id="app"]/main/div[2]/div/div/div[2]/div/div[2]')
-                    await output_locator.wait_for(state='visible')  # Wait until the output is visible
-
-                    # Extract and clean up the Copilot output
-                    copilot_output = await output_locator.text_content()
+                    await page.wait_for_selector("span.font-ligatures-none")
+        
+                    # Extract the text content
+                    copilot_output = await page.text_content("span.font-ligatures-none")
                     copilot_output = copilot_output[12:]  # Remove unwanted text at the beginning
                     print(copilot_output)
 
@@ -176,11 +175,10 @@ class EmailAndAbstractFinder:
                     await input_field.press('Enter')
                     await asyncio.sleep(8) 
 
-                    output_locator = page.locator('//*[@id="app"]/main/div[2]/div/div/div[2]/div/div[2]')
-                    await output_locator.wait_for(state='visible')  # Wait until the output is visible
-
-                    copilot_output = await output_locator.text_content()
-                    copilot_output = copilot_output[12:]  # Clean up the output
+                    await page.wait_for_selector("span.font-ligatures-none")
+        
+                    # Extract the text content
+                    copilot_output = await page.text_content("span.font-ligatures-none")
 
                     summarized_researches += copilot_output + "\n"
 
@@ -205,8 +203,7 @@ class EmailAndAbstractFinder:
             print (len(chunks))
             for chunk in chunks:
                 input_field = page.locator('//textarea[@placeholder="Message Copilot"]')
-                # output_locator = page.locator('//*[@id="app"]/main/div[2]/div/div/div[2]/div/div[2]')
-                # output_locator.wait_for(state='visible')  # Wait until the output is visible
+                
                 await input_field.fill(f"{chunk}")
                 await asyncio.sleep(5)
                 await input_field.press('Enter')
@@ -242,10 +239,11 @@ class EmailAndAbstractFinder:
                     await asyncio.sleep(1)
 
                 await asyncio.sleep(5)
-                output_locator = page.locator('//*[@id="app"]/main/div[2]/div/div/div[2]/div/div[2]')
-                await output_locator.wait_for(state='visible')  # Wait until the output is visible
-                copilot_output = await output_locator.text_content()
-                copilot_output = copilot_output[12:]
+
+                await page.wait_for_selector("span.font-ligatures-none")
+        
+                # Extract the text content
+                copilot_output = await page.text_content("span.font-ligatures-none")
                 print(copilot_output)
                 list_of_emails.append(copilot_output)
 

@@ -13,8 +13,8 @@ from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Initialize the AI model
-model1 = ChatOllama(model="llama3.2:3b", format="json", temperature=0.3, num_ctx=8192)
-model1 = model1.bind_tools(tools=tools)
+model = ChatOllama(model="llama3.2:3b", format="json", temperature=0.3, num_ctx=8192)
+model = model.bind_tools(tools=tools)
 
 # Create the prompt template for the AI model
 prompt = ChatPromptTemplate.from_messages([
@@ -30,7 +30,7 @@ def process_query(query: str, resume: str = None) -> str:
     logging.info(f"Processing query: {query}")
     formatted_prompt = prompt.format_messages(input=query)
     logging.info(f"Formatted prompt: {formatted_prompt}")
-    result = model1.invoke(formatted_prompt)
+    result = model.invoke(formatted_prompt)
     logging.info(result)
     
     if result.tool_calls:
@@ -58,12 +58,12 @@ async def start():
     Initializes the chat session.
     """
     logging.info("Chat started")
-    cl.user_session.set("model", model1)
+    cl.user_session.set("model", model)
     
     # Welcome message with instructions
     await cl.Message(
-        content="""Welcome! I am your AI Assitant which can help you in writing Personalized Emails to Professors of Various Countries.
-        If you want to write a personalized email, please upload your Resume by first typing the command `/upload` & then upload Resume."""
+        content="""Welcome! I am your AI Assitant to help you in writing Personalized Emails to Professors of Various Countries.
+        If you want to write a personalized email, please upload your Resume."""
     ).send()
 
 # Chainlit event handler for incoming messages
@@ -77,21 +77,26 @@ async def main(message: cl.Message):
     """
     logging.info(f"Received message: {message.content}")
 
-    # Check if the message is the upload command
-    if message.content.strip().lower() == "/upload":
-        # Ask the user to upload a file
-        files = await cl.AskFileMessage(
-            content="Please upload the Resume",
-            accept=["application/pdf"],
-            max_size_mb=20,
-        ).send()
+    # Handle regular messages
+    if message.content and not message.elements:
+        resume = cl.user_session.get('resume')
+        query = message.content
+        
+        if resume:
+            response = process_query(query, resume)
+        else:
+            response = process_query(query)
 
-        if files is None or len(files) == 0:
-            await cl.Message(content="No file was uploaded. You can try again later with the '/upload' command.").send()
+        logging.info(f"Generated Response: {response}")
+        await cl.Message(content=response).send()
+
+    elif message.elements and message.elements[0].type == "file":
+
+        resume = message.elements[0]
+        if resume.mime != "application/pdf":
+            await cl.Message(content="File type not Supported, Please upload Resume as a PDF file.").send()
             return
-
         # Process the uploaded file
-        resume = files[0]
         pdf_text = ""
         msg = cl.Message(content=f"Processing `{resume.name}`...")
         await msg.send()
@@ -106,22 +111,9 @@ async def main(message: cl.Message):
             # Store the resume in the session
             cl.user_session.set("resume", pdf_text)
             
-            await cl.Message(content=f"Successfully processed `{resume.name}`. You can now ask questions about this resume.").send()
-        
+            await cl.Message(content=f"Successfully processed `{resume.name}`. You can now write emails using this resume.").send()
+
         except Exception as e:
             error_message = f"Error processing `{resume.name}`: {str(e)}"
             logging.error(error_message)
             await cl.Message(content=error_message).send()
-    
-    # Handle regular messages
-    elif message.content:
-        resume = cl.user_session.get('resume')
-        query = message.content
-        
-        if resume:
-            response = process_query(query, resume)
-        else:
-            response = process_query(query)
-
-        logging.info(f"Generated Response: {response}")
-        await cl.Message(content=response).send()

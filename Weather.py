@@ -13,6 +13,8 @@ def get_current_weather(location: str, unit: str = "celsius") -> str:
     base_url = "https://api.open-meteo.com/v1/forecast"
 
     # Set up parameters for the weather API
+    if unit == '':
+        unit = "celsius"
     params = {
         "latitude": 0,
         "longitude": 0,

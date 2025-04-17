@@ -3,8 +3,6 @@ import logging
 import pandas as pd
 from langchain_ollama import ChatOllama
 from langchain.prompts import ChatPromptTemplate
-from helper1 import ProfDataCreater, EmailAndAbstractFinder       # Uncomment to use with Ollama
-# from helper2 import ProfDataCreater, EmailAndAbstractFinder
 
 model1 = ChatOllama(model="llama3.2:3b", temperature=0.5, num_ctx=2048)
 model2 = ChatOllama(model="llama3.2:3b", temperature=0.6, num_ctx=8192)
@@ -72,24 +70,28 @@ def generate_email(summarized_researches: str, skills: str) -> str:
     logging.info(result)
     return result.content
 
-async def get_list_of_emails(args, resume: str) -> list:
+async def get_list_of_emails(args, resume: str, locally: bool = True) -> list:
     """
     Get the list of emails by processing professor data and generating emails.
     
     Arguments:
     - args: Dictionary containing the website and location.
     - resume: User's resume for extracting skills.
+    - locally: Boolean indicating whether to use local llm or copilot for email generation.
     
     Returns:
     - list_of_emails: A list of email bodies.
     """
-
-    # Uncomment these lines to extract skills from resume using Ollama
+    if locally:
+        from helper_local import ProfDataCreater, EmailAndAbstractFinder
+    else:
+        from helper_auto import ProfDataCreater, EmailAndAbstractFinder
+    
     skills = extract_skills(resume)
     locations = normalize_location_param(args['location'])
     df1 = await ProfDataCreater(args['website'], locations).get_data()
     df1.to_csv('prof_data.csv')
-    df2 = await EmailAndAbstractFinder(df1).get_emails_and_abstracts()
+    df2 = await EmailAndAbstractFinder(df1, resume).get_emails_and_abstracts()
     list_of_emails = []
     for _, row in df2.iterrows():
         email = generate_email(row['Research Summary'], skills)
@@ -100,10 +102,3 @@ async def get_list_of_emails(args, resume: str) -> list:
     final_df.to_csv('final_df.csv', index=False)
     
     return list_of_emails
-
-    # df1 = await ProfDataCreater(args['website'], args['location']).get_data()
-    # df1.to_csv('prof_data.csv')
-    # df2 = await EmailAndAbstractFinder(df1, resume).get_emails_and_abstracts()
-
-    # df2.to_csv('final_df.csv')
-    # return [df2['Email Body'][0]]
