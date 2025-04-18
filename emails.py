@@ -36,7 +36,7 @@ def normalize_location_param(topic) -> list:
 
 # Function to extract skills from resume
 def extract_skills(resume: str) -> str:
-    prompt = ChatPromptTemplate.from_template(f"""You are an AI assistant tasked with extracting the skills from a resume. The resume may contain various sections such as personal information, education, work experience, and technical skills. Focus on identifying and listing the skills mentioned in the resume. Please extract the skills and list them clearly. If the skills are organized in a section, make sure to list them from that section. If the skills are mentioned throughout the document, collect them all and present them as a comprehensive list.
+    prompt = ChatPromptTemplate.from_template(f"""You are an AI assistant that reads resumes and extracts the candidate's key technical and domain-specific skills. From the following resume, extract the most relevant and noteworthy skills and summarize them clearly in a single paragraph. Do not include soft skills or personal traits. Focus only on technical tools, programming languages, libraries, frameworks, relevant technologies and work experiences (if any). Return only a clean paragraph summarizing the skills.
     Resume Text:
     {resume}
     Extracted Skills:""")

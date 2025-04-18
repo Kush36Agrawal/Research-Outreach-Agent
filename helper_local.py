@@ -9,9 +9,10 @@ from playwright.async_api import async_playwright
 class ProfDataCreater:
     """Creates a DataFrame with the List of Professors and their Researches"""
 
-    def __init__(self, url: str, regions: list):
+    def __init__(self, url: str, regions: list, skills: str):
         self.url = url
         self.regions = regions
+        self.skills = skills
 
     async def get_data(self) -> pd.DataFrame :
 
@@ -20,7 +21,7 @@ class ProfDataCreater:
         researches = []
         # Iterate over each link and add a random delay between 8 to 12 seconds
         for link in df['DBLP Link']:
-            researches.append(await self._get_prof_research(link))
+            researches.append(await self._get_prof_research(link, self.skills))
 
         # Convert the list of results into a DataFrame
         researches = pd.DataFrame(researches, columns=['Research Summary'])
@@ -34,7 +35,7 @@ class ProfDataCreater:
         return await prof_list.getProfList()
     
     async def _get_prof_research(self, prof_url: str) -> list:
-        prof_researches = ProfessorResearch(prof_url)
+        prof_researches = ProfessorResearch(prof_url, self.skills)
         return await prof_researches.getProfResearch()
 
 
@@ -102,6 +103,7 @@ class EmailAndAbstractFinder:
 
                 except Exception as e:
                     print(f"Error while extracting output for {prof_name}: {e}")
+                    continue
 
                 await asyncio.sleep(2)  # Wait before processing the next request
 
