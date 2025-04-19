@@ -44,8 +44,8 @@ def process_query(query: str, resume: str = None) -> str:
             elif function_name == "get_conversational_response":
                 return args['response']
             elif function_name == "get_list_of_emails" and resume:
-                list_of_emails = asyncio.run(get_list_of_emails(args, resume))
-                return list_of_emails[0]
+                asyncio.run(get_list_of_emails(args, resume))
+                return "Emails have been generated Successfully."
             elif function_name == "get_list_of_emails":
                 return "Please upload your Resume first to write Personalized Emails."
 

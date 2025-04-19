@@ -17,7 +17,7 @@ class ProfDataCreater:
     async def get_data(self) -> pd.DataFrame :
 
         df = await self._get_prof_list(self.url, self.regions)
-        df.to_csv('1stdf.csv', index=False)
+        df.to_csv('all_prof_details.csv', index=False)
         researches = []
         # Iterate over each link and add a random delay between 8 to 12 seconds
         for link in df['DBLP Link']:
