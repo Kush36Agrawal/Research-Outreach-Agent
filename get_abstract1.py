@@ -9,8 +9,8 @@ embed_model = OllamaEmbeddings(model='all-minilm:33m', num_ctx=512)
 
 def calculate_similarity(text1: str, text2: str) -> float:
     """Calculates the cosine similarity between two texts using embeddings."""
-    embed1 = embed_model.embed_documents(text1)
-    embed2 = embed_model.embed_documents(text2)
+    embed1 = embed_model.embed_query(text1)
+    embed2 = embed_model.embed_query(text2)
     vec1 = np.array(embed1)
     vec2 = np.array(embed2)
 

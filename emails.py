@@ -52,7 +52,7 @@ def extract_skills(resume: str) -> str:
 
 
 # Function to generate email
-async def create_prompt(prof_name: str, summarized_researches: str, skills: str) -> str:
+def create_prompt(prof_name: str, summarized_researches: str, skills: str) -> str:
     # Prompt for general use
     # prompt = ChatPromptTemplate.from_template(f"""Below is a professor's research abstract and a summary of my skills froskills. Please generate a polite and professional email body introducing me to the professor. In the email, mention the specific area of research the professor is involved in, and highlight the skills I have that are relevant to their work. Express my interest in discussing potential opportunities for collaboration or research.
 
@@ -90,11 +90,11 @@ async def get_list_of_emails(args, resume: str, locally: bool = True) -> list:
 
     locations = normalize_location_param(args['location'])
 
-    df1 = await ProfDataCreater(args['website'], locations).get_data()
-    df1.to_csv('prof_research_data.csv')
+    df1 = await ProfDataCreater(args['website'], locations, skills).get_data()
+    df1.to_csv('prof_research_data.csv', index=False)
 
     df2 = await EmailAndAbstractFinder(df1, resume).get_emails_and_abstracts()
-    df2.to_csv('prof_research_and_email.csv')
+    df2.to_csv('prof_research_and_email.csv', index=False)
 
     list_of_emails = []
 

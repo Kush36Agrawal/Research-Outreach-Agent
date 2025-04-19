@@ -9,7 +9,7 @@ from get_researches_of_prof import ProfessorResearchesLink
 class ProfDataCreater:
     """Creates a DataFrame with the List of Professors and their Researches"""
 
-    def __init__(self, url: str, regions: list):
+    def __init__(self, url: str, regions: list, skills: str = None):
         self.url = url
         self.regions = regions
 
