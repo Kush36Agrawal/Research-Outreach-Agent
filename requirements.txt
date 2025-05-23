@@ -1,0 +1,13 @@
+chainlit
+langchain
+langchain-community
+langchain-ollama
+pandas
+torch
+transformers==4.46.3
+requests
+beautifulsoup4
+playwright
+pypdf2
+numpy
+lxml==5.3.1

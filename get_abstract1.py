@@ -99,7 +99,7 @@ class ProfessorResearch:
                                 _, abstract = get_paper_details(target_url)
                                 if abstract != "Abstract not found":
                                     similarity = calculate_similarity(abstract, self.skills)
-                                    if similarity > 0.07:
+                                    if similarity > 0.3:
                                         abstracts.append(f"{len(abstracts) + 1}.) {abstract}")
                         except Exception as e:
                             print(f"Error processing link {link}: {e}")
