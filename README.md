@@ -4,6 +4,8 @@ Research OutReach Agent is an AI-powered academic outreach automation tool. It h
 
 ---
 
+https://github.com/user-attachments/assets/ee167581-6780-43fa-9945-5d518e07755c
+
 ## Features
 
 - **Automated Professor Discovery:**  
